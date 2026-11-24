@@ -256,7 +256,7 @@ def backtest(O: dict, mem: pd.DataFrame, panel: pd.DataFrame | None, log=print) 
     stress = ((lvl < lvl.rolling(200).mean()) | (lvl / lvl.rolling(252, min_periods=50).max() - 1 <= -0.10)).to_numpy()
     ev = []
     for key, mask in S.items():
-        M = (mask & is_mem).to_numpy()
+        M = (mask & is_mem).to_numpy(copy=True)          # pandas 3 : tableau en lecture seule sans copie
         M[idx < start] = False
         st = stops[key].to_numpy()
         for j, t in enumerate(cols):
