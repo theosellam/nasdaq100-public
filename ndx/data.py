@@ -109,6 +109,7 @@ CONTEXT_TICKERS = {"^VXN": "VXN (volatilité Nasdaq 100)", "^VIX": "VIX", "^TNX"
 
 
 _YF_LOCK = threading.RLock()
+YF_LOCK_WAIT = 180      # secondes d'attente maximum derrière un autre téléchargement
 
 
 def download(tickers, *args, **kwargs) -> pd.DataFrame:
@@ -118,7 +119,9 @@ def download(tickers, *args, **kwargs) -> pd.DataFrame:
     sont redemandés une fois, un par un (échecs ponctuels de Yahoo)."""
     if kwargs.get("threads", True) is True:
         kwargs["threads"] = YF_THREADS
-    with _YF_LOCK:
+    if not _YF_LOCK.acquire(timeout=YF_LOCK_WAIT):
+        raise TimeoutError("Yahoo Finance : un téléchargement précédent ne répond plus")
+    try:
         raw = yf.download(tickers, *args, **kwargs)
         syms = tickers.split() if isinstance(tickers, str) else list(tickers)
         if (len(syms) < 2 or raw is None or raw.empty or kwargs.get("group_by", "column") != "column"
@@ -135,6 +138,8 @@ def download(tickers, *args, **kwargs) -> pd.DataFrame:
         except Exception:
             pass
         return raw
+    finally:
+        _YF_LOCK.release()
 
 
 def _yahoo_symbol(ticker: str) -> str:

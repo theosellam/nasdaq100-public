@@ -37,6 +37,7 @@ class State:
         self.ext_chart: dict = {}
         self.result: analysis.Analysis | None = None
         self.cached: dict | None = None
+        self.phase = ""
         self.analysts_loading = False
         self.error: str | None = None
         self.pf = None
@@ -187,6 +188,13 @@ class State:
             now = time.time()
             if self.cached and not force and now - self.last_live < LIVE_TTL:
                 return self.cached
+            first = self.cached is None
+
+            def phase(msg: str) -> None:             # étape affichée pendant le premier calcul (et notée au journal)
+                self.phase = msg
+                if first:
+                    print(f"  [{time.strftime('%H:%M:%S')}] {msg}")
+            phase("cours du jour")
             # Un seul téléchargement groupé (yfinance n'est pas sûr en parallèle) : indice + contexte + titres détenus
             try:
                 pf = portfolio.load()
@@ -195,7 +203,8 @@ class State:
             extras = portfolio.extra_tickers(pf, self.tickers) if pf else []
             ctx_cols = list(data.CONTEXT_TICKERS)
             try:
-                lc, lv, bars = data.fetch_prices(self.tickers + ctx_cols + extras + ([portfolio.FX_TICKER] if pf else []), "1mo", ohlc=True)
+                syms = self.tickers + ctx_cols + extras + ([portfolio.FX_TICKER] if pf else [])
+                lc, lv, bars = _bounded(lambda: data.fetch_prices(syms, "1mo", ohlc=True), 150, "Cours du jour (Yahoo Finance)")
                 self.live_bars = bars
                 ok = int(lc.reindex(columns=self.tickers).notna().any().sum())
                 if ok < 0.5 * len(self.tickers):
@@ -214,21 +223,25 @@ class State:
             except Exception as e:  # réseau indisponible : on garde les derniers cours connus
                 self.error = f"Cours non rafraîchis : {e}"
             if force or now - self.last_intraday > INTRADAY_TTL:
+                phase("séance de l'indice")
                 try:
-                    self.intraday = data.fetch_intraday()
+                    self.intraday = _bounded(data.fetch_intraday, 40, "Séance du jour")
                     self.last_intraday = now
                 except Exception:
                     pass
             if force or now - self.last_intraday > INTRADAY_TTL or not self.extended:
+                phase("cotations hors séance")
                 try:   # pré-ouverture / après-clôture par titre + future NQ=F (overnight)
-                    self.extended = data.fetch_extended(self.tickers + extras + [data.ETF_TICKER, data.FUTURES_TICKER])
+                    self.extended = _bounded(lambda: data.fetch_extended(self.tickers + extras + [data.ETF_TICKER, data.FUTURES_TICKER]),
+                                             40, "Cotations hors séance")
                 except Exception as e:
                     print("  ⚠ cotations hors séance :", e)
                 try:
-                    self.ext_chart = data.fetch_session_chart() or self.ext_chart
+                    self.ext_chart = _bounded(data.fetch_session_chart, 60, "Courbe hors séance") or self.ext_chart
                 except Exception as e:
                     print("  ⚠ courbe hors séance :", e)
             self.last_live = now
+            phase("calcul des indicateurs et des opportunités")
             try:
                 self.result = analysis.run(self.cons, self.close, self.volume, self.caps, self.analysts,
                                            self.fundamentals, self.ctx, self.lab)
@@ -247,6 +260,7 @@ class State:
                     self.journal_t = now
             except Exception as e:
                 print("  ⚠ journal :", e)
+            phase("portefeuille, swing et laboratoire")
             out = report.payload(self.result, self.intraday, live=True)
             try:
                 out["portfolio"] = report.clean(self._portfolio())
@@ -351,13 +365,43 @@ class State:
         return report.clean(out)
 
 
+def _bounded(fn, seconds: float, what: str):
+    """Exécute fn avec un délai maximum : un service qui ne répond pas ne doit jamais bloquer le démarrage
+    ni le rafraîchissement (le fil abandonné finit seul, en arrière-plan)."""
+    box: dict = {}
+
+    def run():
+        try:
+            box["v"] = fn()
+        except BaseException as e:      # noqa: BLE001 — renvoyé tel quel à l'appelant
+            box["e"] = e
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        raise TimeoutError(f"{what} : pas de réponse en {int(seconds)} s")
+    if "e" in box:
+        raise box["e"]
+    return box.get("v")
+
+
 class Boot:
     """Démarrage en arrière-plan : le port s'ouvre tout de suite (exigé par les hébergeurs),
     les données se chargent ensuite. En attendant, l'API répond 503 et la page patiente."""
     def __init__(self) -> None:
         self.state: State | None = None
-        self.status = "Démarrage…"
+        self._status = "Démarrage…"
         self.error: str | None = None
+        self._pending: State | None = None       # état en cours de premier calcul (pour afficher l'étape)
+
+    @property
+    def status(self) -> str:
+        ph = getattr(self._pending, "phase", "") if self._pending is not None and self.state is None else ""
+        return f"{self._status} — {ph}" if ph and not self.error else self._status
+
+    @status.setter
+    def status(self, v: str) -> None:
+        self._status = v
 
     def run(self) -> None:
         try:
@@ -373,6 +417,7 @@ class Boot:
                     print("  ⚠ mise à jour impossible : démarrage avec les données existantes")
             self.status = "Calcul de l'analyse…"
             st = State()
+            self._pending = st
             st.refresh(force=True)
             self.state = st
             print("✓ Données prêtes")
