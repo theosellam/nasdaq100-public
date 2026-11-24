@@ -466,9 +466,18 @@ def make_handler(boot: Boot, password: str | None = None):
 
 def serve(port: int = 8100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
     boot = Boot()
-    threading.Thread(target=boot.run, daemon=True).start()
     password = os.environ.get("NDX_PASSWORD") or None
-    httpd = ThreadingHTTPServer((host, port), make_handler(boot, password))
+    httpd = None
+    for p in range(port, port + 20):           # port occupé (autre copie déjà lancée) : on prend le suivant
+        try:
+            httpd = ThreadingHTTPServer((host, p), make_handler(boot, password))
+            break
+        except OSError:
+            print(f"  Port {p} déjà utilisé, essai du port {p + 1}…")
+    if httpd is None:
+        raise SystemExit(f"Aucun port libre entre {port} et {port + 19} : fermez les autres fenêtres du tableau de bord.")
+    port = p
+    threading.Thread(target=boot.run, daemon=True).start()
     url = f"http://localhost:{port}"
     print(f"✓ Tableau de bord en direct : {url}   (écoute sur {host}{', protégé par mot de passe' if password else ''} · Ctrl+C pour arrêter)")
     print("  Les données se chargent en arrière-plan ; la page s'affiche dès qu'elles sont prêtes.")
