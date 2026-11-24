@@ -122,8 +122,17 @@ class State:
             try:
                 tickers = self.tickers
                 if force_full or not history.PRICES_FILE.exists() or history.age_days(history.HIST_DIR / "build.json") > 7:
-                    self.lab_status = "téléchargement de l'historique (≈ 4 min)…"
-                    history.build_all(tickers)
+                    first = not history.PRICES_FILE.exists()
+                    self.lab_status = ("premier lancement : construction de l'historique (5 à 30 min selon Yahoo)…" if first
+                                       else "reconstruction hebdomadaire de l'historique…")
+
+                    def step(msg: str) -> None:          # affiche l'étape en cours dans l'onglet Laboratoire
+                        print(msg)
+                        m = msg.strip()
+                        if m.startswith("→"):
+                            self.lab_status = (("premier lancement — " if first else "") + m.lstrip("→ ").rstrip("…")
+                                               + f" (étape {self._lab_step(m)} sur 5)…")
+                    history.build_all(tickers, log=step)
                 elif lab.LAB_FILE.exists() and history.age_days(lab.LAB_FILE) < 0.8:
                     if not history.OHLCV_FILE.exists() or not swing.SWING_FILE.exists():
                         self._swing_job(tickers)
@@ -141,6 +150,11 @@ class State:
                 traceback.print_exc()
                 self.lab_status = f"erreur : {e}"
         threading.Thread(target=job, daemon=True).start()
+
+    @staticmethod
+    def _lab_step(msg: str) -> int:
+        order = ("Composition historique", "Cours quotidiens", "Bougies", "Comptes trimestriels", "Historique des analystes")
+        return next((i + 1 for i, k in enumerate(order) if k in msg), 1)
 
     def _swing_job(self, tickers: list[str]) -> None:
         """Bougies historiques à jour puis validation des setups de swing."""
