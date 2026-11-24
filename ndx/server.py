@@ -329,6 +329,7 @@ class State:
             g[g.index > intra.index[-1]] = float("nan")
             prev = s[s.index < day.tz_localize(None)]          # clôture de la séance précédente
             out["intraday"] = {"times": [x.strftime("%H:%M") for x in grid], "prepost": True,
+                               "ts": [int(x.timestamp()) for x in grid],
                                "close": [None if pd.isna(v) else round(float(v), 2) for v in g.values],
                                "prev_close": round(float(prev.iloc[-1]), 2) if len(prev) else None}
         except Exception:

@@ -60,6 +60,7 @@ def payload(a: Analysis, intraday: pd.Series | None = None, live: bool = False) 
         "live": live,
         "generated": (datetime.now(ZoneInfo(os.environ["NDX_TZ"])) if os.environ.get("NDX_TZ")
                       else datetime.now()).strftime("%d/%m/%Y %H:%M:%S"),
+        "generated_ts": int(datetime.now().timestamp()),   # converti dans le fuseau choisi par l'utilisateur
         "asof": a.asof.strftime("%d/%m/%Y"),
         "market": market_status(),
         "analystsUpdated": a.analysts_updated,
@@ -80,6 +81,7 @@ def payload(a: Analysis, intraday: pd.Series | None = None, live: bool = False) 
     }
     if intraday is not None and len(intraday):
         out["intraday"] = {"times": [t.strftime("%H:%M") for t in intraday.index],
+                           "ts": [int(t.timestamp()) for t in intraday.index],
                            "close": [round(float(v), 2) for v in intraday.values],
                            "prev_close": a.index.get("prev_close")}
     return clean(out)

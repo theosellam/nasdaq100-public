@@ -212,6 +212,7 @@ def fetch_session_chart(now: pd.Timestamp | None = None) -> dict:
                     else "post" if 960 <= m < 1200 else "overnight")
     pct = lambda s, ref: [None if pd.isna(v) else round(v / ref - 1, 5) for v in s]
     return {"times": [t.strftime("%H:%M") for t in grid], "days": [t.strftime("%d/%m") for t in grid],
+            "ts": [int(t.timestamp()) for t in grid],      # horodatage absolu : affichage dans le fuseau choisi
             "session": sess, "qqq": pct(w[ETF_TICKER], qq_ref), "nq": pct(w[FUTURES_TICKER], nq_ref),
             "ref_label": ref_t.strftime("%d/%m") + " 16:00", "qqq_ref": round(qq_ref, 2), "nq_ref": round(nq_ref, 2)}
 

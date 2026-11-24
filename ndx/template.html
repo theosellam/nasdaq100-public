@@ -54,6 +54,7 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 .spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp 0.7s linear infinite; display: none; }
 .loading .spin { display: inline-block; }
 @keyframes sp { to { transform: rotate(360deg); } }
+#tz { width: auto; max-width: 220px; font: inherit; font-size: 12.5px; padding: 3px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface, transparent); color: var(--text); }
 .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); cursor: pointer; user-select: none; }
 .banner { margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: var(--wash); border-left: 3px solid var(--warning); display: none; }
 
@@ -205,6 +206,7 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
   <span class="pill" id="mkt"><span class="dot"></span><span id="mkt-label">—</span></span>
   <span class="sub" id="updated">Chargement des derniers cours…</span>
   <span class="grow"></span>
+  <label class="toggle" title="Fuseau horaire des heures affichées (séances, graphiques intrajournaliers, mises à jour)">Fuseau <select id="tz"></select></label>
   <label class="toggle" id="auto-wrap"><input type="checkbox" id="auto"> Actualisation auto (60 s)</label>
   <button class="btn primary" id="refresh"><span class="spin"></span>Rafraîchir les cours</button>
 </div></div>
@@ -617,6 +619,19 @@ const fmtPct = (v, d = 1, signed = true) => !isNum(v) ? "—" :
   (signed && v > 0 ? "+" : "") + (v * 100).toLocaleString("fr-FR", {minimumFractionDigits: d, maximumFractionDigits: d}) + " %";
 const fmtNum = (v, d = 2) => !isNum(v) ? "—" : v.toLocaleString("fr-FR", {minimumFractionDigits: d, maximumFractionDigits: d});
 const fmtCap = v => !isNum(v) ? "—" : v >= 1e12 ? fmtNum(v / 1e12, 2) + " T$" : fmtNum(v / 1e9, 0) + " Md$";
+// ── Fuseau horaire d'affichage (choix mémorisé dans le navigateur) ; le marché, lui, vit à l'heure de New York
+const TZS = [["local", "Heure de cet ordinateur"], ["Europe/Paris", "Paris"], ["Europe/London", "Londres"], ["America/New_York", "New York"],
+  ["America/Toronto", "Montréal / Toronto"], ["America/Chicago", "Chicago"], ["America/Los_Angeles", "Los Angeles"],
+  ["Asia/Dubai", "Dubaï"], ["Asia/Hong_Kong", "Hong Kong"], ["Asia/Tokyo", "Tokyo"], ["UTC", "UTC"]];
+let TZ = (() => { try { return localStorage.getItem("ndx_tz") || "local"; } catch (e) { return "local"; } })();
+const tzId = () => TZ === "local" ? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") : TZ;
+const tzName = () => { const z = TZS.find(x => x[0] === tzId()); return z ? z[1] : tzId().split("/").pop().replace(/_/g, " "); };
+const isNY = () => tzId() === "America/New_York";
+const fmtTime = (ts, sec = false) => isNum(ts) ? new Date(ts * 1000).toLocaleTimeString("fr-FR",
+  {hour: "2-digit", minute: "2-digit", ...(sec ? {second: "2-digit"} : {}), timeZone: tzId()}) : "—";
+const fmtDayTime = ts => isNum(ts) ? new Date(ts * 1000).toLocaleString("fr-FR",
+  {weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: tzId()}) : "—";
+const tzHour = ts => +new Intl.DateTimeFormat("en-GB", {hour: "2-digit", hourCycle: "h23", timeZone: tzId()}).format(new Date(ts * 1000));
 const fmtDate = s => s ? new Date(s + "T12:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short"}) : "—";
 const cls = v => !isNum(v) ? "" : v > 0 ? "up" : v < 0 ? "down" : "";
 const arrow = v => !isNum(v) ? "" : v > 0 ? "▲ " : v < 0 ? "▼ " : "";
@@ -694,8 +709,9 @@ function lineChart(host, legendHost, data, series, opts = {}) {
   }
   if (opts.time) {
     const hs = opts.hourStep || 1;
-    xs.forEach((t, i) => { if (t.endsWith(":00") && +t.slice(0, 2) % hs === 0 && i > 1 && i < nTot - 2)
-      el("text", {x: x(i), y: H - 6, "text-anchor": "middle"}, svg).textContent = t.slice(0, 2) + " h"; });
+    xs.forEach((t, i) => { if (!t.endsWith(":00") || i <= 1 || i >= nTot - 2) return;
+      const h = opts.ts && isNum(opts.ts[i]) ? tzHour(opts.ts[i]) : +t.slice(0, 2);     // heure dans le fuseau choisi
+      if (h % hs === 0) el("text", {x: x(i), y: H - 6, "text-anchor": "middle"}, svg).textContent = h + " h"; });
   } else {
     let last = ""; const months = new Set(xs.map(d => d.slice(0, 7))).size;
     const step = months > 36 ? 6 : months > 18 ? 3 : n > 150 ? 2 : 1;
@@ -739,7 +755,7 @@ function lineChart(host, legendHost, data, series, opts = {}) {
     series.forEach((s, k) => { const v = data[s.key][i];
       dots[k].setAttribute("visibility", isNum(v) ? "visible" : "hidden");
       if (isNum(v)) { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(v)); } });
-    const title = opts.tipTitle ? opts.tipTitle(i) : opts.time ? xs[i] + " (New York)" : new Date(xs[i] + "T12:00").toLocaleDateString("fr-FR", {day: "numeric", month: "long", year: "numeric"});
+    const title = opts.tipTitle ? opts.tipTitle(i) : opts.time ? (opts.ts ? `${fmtTime(opts.ts[i])} (${tzName()})` : xs[i] + " (New York)") : new Date(xs[i] + "T12:00").toLocaleDateString("fr-FR", {day: "numeric", month: "long", year: "numeric"});
     const rows = series.map(s => [s.label, isNum(data[s.key][i]) ? fy(data[s.key][i]) : "—"]);
     if (opts.extraTip) rows.push(...opts.extraTip(i));
     markIdx.filter(mk => mk.i === i).forEach(mk => rows.push([`Événement ${mk.n}`, esc(mk.label)]));
@@ -771,11 +787,11 @@ function renderOverviewCharts() {
     // abscisse fixe 9h30 → 16h00 (78 créneaux de 5 min)
     const slots = Math.max(it.times.length, 79);
     const last = it.close[it.close.length - 1];
-    $("intra-sub").textContent = `Dernier : ${fmtNum(last, 0)} à ${it.times[it.times.length - 1]} (New York) · ` +
+    $("intra-sub").textContent = `Dernier : ${fmtNum(last, 0)} à ${it.ts ? fmtTime(it.ts.at(-1)) + " (" + tzName() + ")" : it.times.at(-1) + " (New York)"} · ` +
       `${fmtPct(it.prev_close ? last / it.prev_close - 1 : null, 2)} vs clôture précédente`;
     lineChart($("chart-intra"), $("lg-intra"), {dates: it.times, close: it.close},
       [{key: "close", label: "^NDX", color: "--series-1"}],
-      {time: true, slots, refs: [{value: it.prev_close, label: "Veille", legend: "Clôture précédente", color: "--muted"}],
+      {time: true, slots, ts: it.ts, refs: [{value: it.prev_close, label: "Veille", legend: "Clôture précédente", color: "--muted"}],
        extraTip: i => [["vs veille", fmtPct(it.prev_close ? it.close[i] / it.prev_close - 1 : null, 2)]]});
   } else $("chart-intra").innerHTML = `<div class="empty">Données intrajournalières disponibles avec le serveur en direct (python3 ndx.py serve).</div>`;
   lineChart($("chart-index"), $("lg-index"), D.indexHistory, [
@@ -941,9 +957,10 @@ function renderExtended() {
   card.style.display = "";
   const C = E.chart, lastI = a => { let i = a.length - 1; while (i >= 0 && a[i] == null) i--; return i; };
   const iN = lastI(C.nq), iQ = lastI(C.qqq);
-  const at = i => i >= 0 ? `${C.days[i]} ${C.times[i]}` : "—";
+  const at = i => i < 0 ? "—" : C.ts ? fmtDayTime(C.ts[i]) : `${C.days[i]} ${C.times[i]}`;
+  const i16 = C.times.indexOf("16:00"), refTz = C.ts && i16 >= 0 && !isNY() ? `, ${fmtTime(C.ts[i16])} ${tzName()}` : "";
   const st = D.market?.state, nowSess = st === "open" ? "regular" : st === "pre" ? "pre" : st === "post" ? "post" : "overnight";
-  $("ext-sub").textContent = `Base 0 = clôture du ${C.ref_label} (New York) · séance actuelle : ${SESS[nowSess]}. Yahoo ne publie pas de cours de nuit (20 h → 4 h) pour les actions : la nuit est suivie par le future NQ=F.`;
+  $("ext-sub").textContent = `Base 0 = clôture du ${C.ref_label.split(" ")[0]} (16 h New York${refTz}) · séance actuelle : ${SESS[nowSess]} · heures affichées : ${tzName()}. Yahoo ne publie pas de cours de nuit (20 h → 4 h à New York) pour les actions : la nuit est suivie par le future NQ=F.`;
   const tile = (l, v, n) => `<div class="t"><div class="label">${l}</div><div class="v">${v}</div><div class="note">${n}</div></div>`;
   const pc = v => `<span class="${cls(v)}">${fmtPct(v, 2)}</span>`;
   const Q = Object.entries(E.quotes || {}).filter(([t]) => D.stocks.some(s => s.ticker === t));
@@ -956,9 +973,9 @@ function renderExtended() {
   ].join("");
   lineChart($("chart-sess"), $("lg-sess"), {dates: C.times, qqq: C.qqq, nq: C.nq},
     [{key: "nq", label: "Future NQ=F", short: "NQ=F", color: "--series-1"}, {key: "qqq", label: "QQQ (pré/après-bourse)", short: "QQQ", color: "--series-2"}],
-    {time: true, slots: C.times.length, bands: C.session, hourStep: 2, height: 240, fmtY: v => fmtPct(v, 1),
+    {time: true, slots: C.times.length, ts: C.ts, bands: C.session, hourStep: 2, height: 240, fmtY: v => fmtPct(v, 1),
      refs: [{value: 0, label: "Clôture", legend: "Clôture de référence", color: "--muted"}],
-     tipTitle: i => `${C.days[i]} ${C.times[i]} (New York) · ${SESS[C.session[i]]}`});
+     tipTitle: i => `${C.ts ? fmtDayTime(C.ts[i]) + " (" + tzName() + ")" : C.days[i] + " " + C.times[i] + " (New York)"} · ${SESS[C.session[i]]}`});
   const rows = Q.map(([t, q]) => ({t, ...q, co: D.stocks.find(s => s.ticker === t)?.company || ""}));
   const line = r => `<tr data-t="${r.t}"><td class="l"><b>${r.t}</b> <small>${esc(r.co)}</small>${heldW(r.t) ? ` <span class="verdict watch">détenu</span>` : ""}</td>
     <td><span class="sess">${SESS[r.ext_session] || ""}</span></td><td>${fmtNum(r.ext)}</td><td class="${cls(r.ext_pct)}"><b>${fmtPct(r.ext_pct, 2)}</b></td></tr>`;
@@ -1215,8 +1232,10 @@ function renderTable() {
 }
 
 // ═════════ Fiche titre ═════════
+let drawerTicker = null;
 async function openStock(t) {
   const S = bySym()[t]; if (!S) return;
+  drawerTicker = t;
   $("drawer").classList.add("on"); $("overlay").classList.add("on");
   drawStock(S, null);
   if (LIVE) {
@@ -1234,7 +1253,7 @@ function drawStock(S, d) {
     <div class="sub">${sec(R.sector)} · ${esc(R.subsector)}</div>
     <h1 style="font-size:22px;margin:2px 0">${R.ticker} <span style="font-weight:400">${esc(R.company)}</span></h1>
     <div style="font-size:28px;font-weight:600">${fmtNum(R.price)} <span style="font-size:16px" class="${cls(R.r_1J)}">${arrow(R.r_1J)}${fmtPct(R.r_1J, 2)}</span></div>
-    ${(q => q ? `<div style="font-size:15px;margin:2px 0 4px"><span class="sess">${SESS[q.ext_session]}</span> <b>${fmtNum(q.ext)}</b> <span class="${cls(q.ext_pct)}">${arrow(q.ext_pct)}${fmtPct(q.ext_pct, 2)}</span> <small class="muted">à ${new Date(q.ext_t * 1000).toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit", timeZone: "America/New_York"})} (NY)</small></div>` : "")((D.extended?.quotes || {})[R.ticker])}
+    ${(q => q ? `<div style="font-size:15px;margin:2px 0 4px"><span class="sess">${SESS[q.ext_session]}</span> <b>${fmtNum(q.ext)}</b> <span class="${cls(q.ext_pct)}">${arrow(q.ext_pct)}${fmtPct(q.ext_pct, 2)}</span> <small class="muted">à ${new Date(q.ext_t * 1000).toLocaleTimeString("fr-FR", {hour: "2-digit", minute: "2-digit", timeZone: tzId()})} (${tzName()})</small></div>` : "")((D.extended?.quotes || {})[R.ticker])}
     <div class="sub">Capitalisation ${fmtCap(R.market_cap)} · poids ${fmtPct(R.weight, 2, false)} · score technique ${fmtNum(R.score, 0)}/100 · score analystes ${fmtNum(R.score_analysts, 0)}/100</div>
     ${oppSection(d?.opportunity || (D.opportunities || []).find(o => o.ticker === (R.ticker === "GOOG" ? "GOOGL" : R.ticker)), d?.financials)}
     ${d?.intraday?.times?.length > 1 ? `<h3>Séance du jour — pré-ouverture, séance, après-clôture</h3><div id="d-intra"></div>` : ""}
@@ -1266,7 +1285,7 @@ function drawStock(S, d) {
   if (d.intraday?.times?.length > 1) { const I = d.intraday, pv = I.prev_close ?? R.prev_close;
     const bands = I.prepost ? I.times.map(t => { const mm = +t.slice(0, 2) * 60 + +t.slice(3); return mm < 570 ? "pre" : mm < 960 ? "regular" : "post"; }) : null;
     lineChart($("d-intra"), null, {dates: I.times, close: I.close},
-    [{key: "close", label: R.ticker, color: "--series-1"}], {time: true, slots: Math.max(79, I.times.length), height: 190, bands, hourStep: I.prepost ? 2 : 1,
+    [{key: "close", label: R.ticker, color: "--series-1"}], {time: true, slots: Math.max(79, I.times.length), ts: I.ts, height: 190, bands, hourStep: I.prepost ? 2 : 1,
      refs: [{value: pv, label: "Veille", color: "--muted"}],
      extraTip: i => [["vs veille", fmtPct(pv && isNum(I.close[i]) ? I.close[i] / pv - 1 : null, 2)], ...(bands ? [["Séance", SESS[bands[i]]]] : [])]}); }
   lineChart($("d-chart"), $("d-lg"), d.history, [
@@ -1837,14 +1856,22 @@ function renderAll() {
   renderTab(currentTab);
   const m = D.market || {};
   $("mkt").className = "pill " + (m.state || "");
-  $("mkt-label").textContent = `${m.label || ""}${m.ny_time ? " · NY " + m.ny_time : ""}`;
-  $("updated").textContent = LIVE ? `Cours mis à jour à ${D.generated?.split(" ")[1] || ""} · séance du ${D.asof}` : `Instantané du ${D.generated} · séance du ${D.asof}`;
+  const nowTz = D.generated_ts && !isNY() ? ` · ${fmtTime(D.generated_ts)} ${tzName()}` : "";
+  $("mkt-label").textContent = `${m.label || ""}${m.ny_time ? " · NY " + m.ny_time : ""}${nowTz}`;
+  $("updated").textContent = LIVE ? `Cours mis à jour à ${D.generated_ts ? fmtTime(D.generated_ts, true) + " (" + tzName() + ")" : D.generated?.split(" ")[1] || ""} · séance du ${D.asof}`
+    : `Instantané du ${D.generated} · séance du ${D.asof}`;
   const msgs = [];
   if (D.error) msgs.push(D.error);
   if (D.analystsLoading) msgs.push("Prévisions des analystes en cours de mise à jour (≈ 30 s)…");
   if (!D.analystsUpdated) msgs.push("Pas encore de données analystes : lancez « python3 ndx.py analysts ».");
   $("banner").style.display = msgs.length ? "block" : "none"; $("banner").textContent = msgs.join(" · ");
 }
+(() => { const sel = $("tz"), loc = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  sel.innerHTML = TZS.map(([k, l]) => `<option value="${k}">${k === "local" ? `${l} (${(loc || "UTC").split("/").pop().replace(/_/g, " ")})` : l}</option>`).join("");
+  sel.value = TZS.some(z => z[0] === TZ) ? TZ : "local";
+  sel.onchange = () => { TZ = sel.value; try { localStorage.setItem("ndx_tz", TZ); } catch (e) {}
+    if (D) renderAll(); if (drawerTicker && $("drawer").classList.contains("on")) openStock(drawerTicker); };
+})();
 $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => {
   $("tabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.id === "tab-" + b.dataset.t));
