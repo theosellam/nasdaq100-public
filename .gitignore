@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+reports/
+.claude/settings.local.json
+
+# Données personnelles (positions, relevés de courtage, garde-fous) : jamais sur GitHub
+data/private/
+
+# Données de marché téléchargées au premier lancement (Yahoo Finance, SEC, Wikipedia)
+data/*.csv
+data/analysts.json
+data/fundamentals.json
+data/history/
+data/journal/
