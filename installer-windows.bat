@@ -2,7 +2,7 @@
 rem Installation sous Windows : crée un environnement Python isolé (.venv) et installe les dépendances.
 chcp 65001 >nul
 cd /d "%~dp0"
-echo == Installation du tableau de bord Nasdaq 100 ==
+echo == Installation de Volatilistat ==
 set "PY="
 where py >nul 2>&1 && py -3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>&1 && set "PY=py -3"
 if not defined PY ( where python >nul 2>&1 && python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" >nul 2>&1 && set "PY=python" )

@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nasdaq 100 — Tableau de bord</title>
+<title>Volatilistat</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 width=%2264%22 height=%2264%22 role=%22img%22 aria-label=%22Volatilistat%22%3E %3Cdefs%3E%3CclipPath id=%22c%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22/%3E%3C/clipPath%3E%3C/defs%3E %3Cg clip-path=%22url(%23c)%22%3E %3Crect width=%2264%22 height=%2264%22 fill=%22%231F6F63%22/%3E %3Crect y=%2244%22 width=%2264%22 height=%227%22 fill=%22%23E8A33D%22/%3E %3Crect y=%2251%22 width=%2264%22 height=%2213%22 fill=%22%2314213D%22/%3E %3C/g%3E %3Cg fill=%22%23F6F1E4%22%3E %3Crect x=%2214.5%22 y=%2227%22 width=%222%22 height=%2215%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%229%22 height=%229%22 rx=%221.5%22/%3E %3Crect x=%2228.5%22 y=%2219%22 width=%222%22 height=%2221%22/%3E%3Crect x=%2225%22 y=%2223%22 width=%229%22 height=%2212%22 rx=%221.5%22/%3E %3Crect x=%2242.5%22 y=%2210%22 width=%222%22 height=%2225%22/%3E%3Crect x=%2239%22 y=%2214%22 width=%229%22 height=%2215%22 rx=%221.5%22/%3E %3C/g%3E %3Cpath d=%22M53 7.5l1.4 2.9 3.2.5-2.3 2.2.5 3.2-2.8-1.5-2.9 1.5.6-3.2-2.3-2.2 3.2-.5z%22 fill=%22%23E8A33D%22/%3E %3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap">
 <style>
 :root {
   color-scheme: light;
@@ -13,6 +16,8 @@
   --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
   --pos-strong: #1c5cab; --pos-light: #86b6ef; --neg-strong: #b8302f; --neg-light: #ec9a9a; --mid: #f0efec; --hold: #c3c2b7;
   --up: #006300; --down: #d03b3b; --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+  /* Identité Volatilistat (système de design) */
+  --jade: #1f6f63; --on-jade: #ffffff; --safran: #e8a33d; --nuit: #14213d; --sable: #f6f1e4;
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
@@ -23,6 +28,7 @@
     --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
     --pos-strong: #3987e5; --pos-light: #1c5cab; --neg-strong: #e66767; --neg-light: #8f2b2b; --mid: #383835; --hold: #52514e;
     --up: #0ca30c; --down: #e66767;
+    --jade: #4fb3a3; --on-jade: #0d1a18; --safran: #f0b357; --nuit: #22345c; --sable: #3b352b;
   }
 }
 * { box-sizing: border-box; }
@@ -39,7 +45,7 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 @media (max-width: 960px) { .g2, .g21, .g12 { grid-template-columns: 1fr; } }
 
 /* Barre supérieure */
-.topbar { position: sticky; top: 0; z-index: 20; background: var(--page); border-bottom: 1px solid var(--border); }
+.topbar { position: sticky; top: 0; z-index: 20; background: var(--page); border-bottom: 2px solid var(--safran); }
 .topbar .in { max-width: 1320px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .topbar .grow { flex: 1; }
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--wash); color: var(--text-secondary); }
@@ -49,7 +55,12 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 .btn { font: inherit; font-size: 13px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
   border-radius: 8px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .btn:hover { background: var(--wash); }
-.btn.primary { background: var(--series-1); color: #fff; border-color: transparent; }
+.btn.primary { background: var(--jade); color: var(--on-jade); border-color: transparent; }
+:focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }
+.brand { display: flex; align-items: center; gap: 8px; margin: 0; }
+.brand img { width: 28px; height: 28px; display: block; }
+.brand .wm { font-family: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; line-height: 1; }
+.brand .idx { font-size: 12px; font-weight: 500; color: var(--text-secondary); padding: 2px 8px; border-radius: 999px; background: var(--wash); }
 .btn:disabled { opacity: .6; cursor: default; }
 .spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp 0.7s linear infinite; display: none; }
 .loading .spin { display: inline-block; }
@@ -61,7 +72,7 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 .tabs { display: flex; gap: 4px; margin: 16px 0 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; font: inherit; font-size: 13.5px;
   color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
-.tabs button.on { color: var(--text-primary); border-bottom-color: var(--series-1); font-weight: 600; }
+.tabs button.on { color: var(--text-primary); border-bottom-color: var(--safran); font-weight: 600; }
 .tab { display: none; } .tab.on { display: block; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
@@ -202,7 +213,7 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
 </head>
 <body>
 <div class="topbar"><div class="in">
-  <h1>Nasdaq 100</h1>
+  <h1 class="brand"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 width=%2264%22 height=%2264%22 role=%22img%22 aria-label=%22Volatilistat%22%3E %3Cdefs%3E%3CclipPath id=%22c%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22/%3E%3C/clipPath%3E%3C/defs%3E %3Cg clip-path=%22url(%23c)%22%3E %3Crect width=%2264%22 height=%2264%22 fill=%22%231F6F63%22/%3E %3Crect y=%2244%22 width=%2264%22 height=%227%22 fill=%22%23E8A33D%22/%3E %3Crect y=%2251%22 width=%2264%22 height=%2213%22 fill=%22%2314213D%22/%3E %3C/g%3E %3Cg fill=%22%23F6F1E4%22%3E %3Crect x=%2214.5%22 y=%2227%22 width=%222%22 height=%2215%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%229%22 height=%229%22 rx=%221.5%22/%3E %3Crect x=%2228.5%22 y=%2219%22 width=%222%22 height=%2221%22/%3E%3Crect x=%2225%22 y=%2223%22 width=%229%22 height=%2212%22 rx=%221.5%22/%3E %3Crect x=%2242.5%22 y=%2210%22 width=%222%22 height=%2225%22/%3E%3Crect x=%2239%22 y=%2214%22 width=%229%22 height=%2215%22 rx=%221.5%22/%3E %3C/g%3E %3Cpath d=%22M53 7.5l1.4 2.9 3.2.5-2.3 2.2.5 3.2-2.8-1.5-2.9 1.5.6-3.2-2.3-2.2 3.2-.5z%22 fill=%22%23E8A33D%22/%3E %3C/svg%3E" alt=""><span class="wm">Volatilistat</span><span class="idx">Nasdaq 100</span></h1>
   <span class="pill" id="mkt"><span class="dot"></span><span id="mkt-label">—</span></span>
   <span class="sub" id="updated">Chargement des derniers cours…</span>
   <span class="grow"></span>

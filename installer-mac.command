@@ -1,7 +1,7 @@
 #!/bin/bash
 # Installation sur Mac : crée un environnement Python isolé (.venv) et installe les dépendances.
 cd "$(dirname "$0")" || exit 1
-echo "== Installation du tableau de bord Nasdaq 100 =="
+echo "== Installation de Volatilistat =="
 
 PY=""
 for c in python3.13 python3.12 python3.11 python3; do

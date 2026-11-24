@@ -28,11 +28,11 @@ def _data_dir() -> Path:
     if not getattr(sys, "frozen", False):
         return Path(__file__).resolve().parent.parent / "data"
     if sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support" / "Nasdaq100"
+        base = Path.home() / "Library" / "Application Support" / "Volatilistat"
     elif os.name == "nt":
-        base = Path(os.environ.get("APPDATA") or Path.home()) / "Nasdaq100"
+        base = Path(os.environ.get("APPDATA") or Path.home()) / "Volatilistat"
     else:
-        base = Path.home() / ".nasdaq100"
+        base = Path.home() / ".volatilistat"
     d = base / "data"
     d.mkdir(parents=True, exist_ok=True)
     seed = Path(getattr(sys, "_MEIPASS", "")) / "data" / "events.json"      # fichier modifiable livré avec l'application

@@ -1,4 +1,6 @@
-# Tableau de bord Nasdaq 100
+# Volatilistat
+
+**L'État des valeurs tech : chaque signal passe la douane du laboratoire.**
 
 Analyse en direct des ~100 titres du Nasdaq 100 (^NDX) : cours (séance, pré-ouverture, après-clôture, overnight via
 le future NQ=F), analystes, fondamentaux, opportunités validées, stratégies, swing trading, laboratoire de signaux
@@ -6,21 +8,22 @@ testés sans biais du futur, et suivi de **votre** portefeuille. Tout tourne sur
 
 > Outil d'analyse uniquement — **pas un conseil en investissement**. Données Yahoo Finance (non officielles,
 > parfois en retard ou incomplètes), SEC EDGAR et Wikipedia.
+> Nasdaq, Nasdaq-100 et NDX sont des marques de Nasdaq, Inc. Volatilistat est un projet indépendant, ni affilié à Nasdaq ni approuvé par elle.
 
 ## Version application (sans installer Python)
 
 Dans la page **Releases** du dépôt (colonne de droite sur GitHub), téléchargez le fichier qui correspond à votre ordinateur :
-`Nasdaq100-Windows.zip`, `Nasdaq100-Mac-AppleSilicon.zip` (Mac M1, M2, M3…) ou `Nasdaq100-Mac-Intel.zip`.
+`Volatilistat-Windows.zip`, `Volatilistat-Mac-AppleSilicon.zip` (Mac M1, M2, M3…) ou `Volatilistat-Mac-Intel.zip`.
 
-- **Mac** : décompressez, glissez **Nasdaq100** dans le dossier Applications et ouvrez-la. L'application n'est pas signée
+- **Mac** : décompressez, glissez **Volatilistat** dans le dossier Applications et ouvrez-la. L'application n'est pas signée
   par un développeur Apple : au premier lancement, macOS la bloque. Ouvrez alors **Réglages Système → Confidentialité
   et sécurité**, puis cliquez sur **Ouvrir quand même** en bas de la page (une seule fois).
-- **Windows** : clic droit sur le ZIP → **Extraire tout**, puis double-clic sur **Nasdaq100.exe** dans le dossier extrait.
+- **Windows** : clic droit sur le ZIP → **Extraire tout**, puis double-clic sur **Volatilistat.exe** dans le dossier extrait.
   Si « Windows a protégé votre ordinateur » s'affiche : **Informations complémentaires → Exécuter quand même**.
 
-Une petite fenêtre « Nasdaq 100 » s'ouvre avec le navigateur : gardez-la ouverte pendant l'utilisation, **Quitter** arrête tout.
-Les données (dont vos positions) sont enregistrées dans `~/Library/Application Support/Nasdaq100` (Mac)
-ou `%APPDATA%\Nasdaq100` (Windows), bouton **Dossier des données** de la fenêtre.
+Une petite fenêtre « Volatilistat » s'ouvre avec le navigateur : gardez-la ouverte pendant l'utilisation, **Quitter** arrête tout.
+Les données (dont vos positions) sont enregistrées dans `~/Library/Application Support/Volatilistat` (Mac)
+ou `%APPDATA%\Volatilistat` (Windows), bouton **Dossier des données** de la fenêtre.
 
 Pour publier une nouvelle version de l'application : `git tag v1.1 && git push --tags` — GitHub construit les trois
 versions (onglet **Actions**, ≈ 10 min) et les ajoute à la Release. Construction locale sur Mac : `bash packaging/build-mac.sh`.

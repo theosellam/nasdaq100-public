@@ -1,9 +1,9 @@
 #!/bin/bash
-# Construit l'application Mac sur cet ordinateur (architecture de ce Mac) : dist/Nasdaq100.app et un ZIP.
+# Construit l'application Mac sur cet ordinateur (architecture de ce Mac) : dist/Volatilistat.app et un ZIP.
 set -e
 cd "$(dirname "$0")/.."
 [ -x .venv/bin/python ] || bash installer-mac.command
-.venv/bin/python -m pip install --quiet pyinstaller
-.venv/bin/python -m PyInstaller packaging/nasdaq100.spec --noconfirm
-ditto -c -k --keepParent dist/Nasdaq100.app "dist/Nasdaq100-Mac-$(uname -m).zip"
-echo "✓ dist/Nasdaq100.app et dist/Nasdaq100-Mac-$(uname -m).zip"
+.venv/bin/python -m pip install --quiet pyinstaller pillow
+.venv/bin/python -m PyInstaller packaging/volatilistat.spec --noconfirm
+ditto -c -k --keepParent dist/Volatilistat.app "dist/Volatilistat-Mac-$(uname -m).zip"
+echo "✓ dist/Volatilistat.app et dist/Volatilistat-Mac-$(uname -m).zip"

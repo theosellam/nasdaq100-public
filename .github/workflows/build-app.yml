@@ -18,11 +18,11 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: Nasdaq100-Windows.zip
+            artifact: Volatilistat-Windows.zip
           - os: macos-15          # Apple Silicon (M1, M2, M3…)
-            artifact: Nasdaq100-Mac-AppleSilicon.zip
+            artifact: Volatilistat-Mac-AppleSilicon.zip
           - os: macos-15-intel    # Intel (macos-13 a été retiré par GitHub fin 2025)
-            artifact: Nasdaq100-Mac-Intel.zip
+            artifact: Volatilistat-Mac-Intel.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -32,16 +32,16 @@ jobs:
       - name: Dépendances
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt pyinstaller
+          python -m pip install -r requirements.txt pyinstaller pillow
       - name: Construction
-        run: python -m PyInstaller packaging/nasdaq100.spec --noconfirm
+        run: python -m PyInstaller packaging/volatilistat.spec --noconfirm
       - name: Archive (Mac)
         if: runner.os == 'macOS'
-        run: ditto -c -k --keepParent dist/Nasdaq100.app "${{ matrix.artifact }}"
+        run: ditto -c -k --keepParent dist/Volatilistat.app "${{ matrix.artifact }}"
       - name: Archive (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path dist/Nasdaq100 -DestinationPath "${{ matrix.artifact }}"
+        run: Compress-Archive -Path dist/Volatilistat -DestinationPath "${{ matrix.artifact }}"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
@@ -62,6 +62,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Nasdaq 100 $GITHUB_REF_NAME" \
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Volatilistat $GITHUB_REF_NAME" \
               --notes "Application autonome (Python inclus). Voir le README pour l'ouverture sur Mac et Windows. Outil d'analyse — pas un conseil en investissement."
           gh release upload "$GITHUB_REF_NAME" out/*.zip --repo "$GITHUB_REPOSITORY" --clobber

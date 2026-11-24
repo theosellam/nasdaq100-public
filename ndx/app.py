@@ -1,4 +1,4 @@
-"""Version « application » (Mac .app / Windows .exe) : une petite fenêtre qui démarre le serveur local,
+"""Volatilistat, version « application » (Mac .app / Windows .exe) : une petite fenêtre qui démarre le serveur local,
 ouvre le tableau de bord dans le navigateur et permet de tout arrêter proprement.
 
 Sans terminal, les messages du serveur vont dans data/../journal.txt (bouton « Dossier des données »)."""
@@ -41,16 +41,27 @@ def main() -> None:
         httpd, url, boot = server.start(int(os.environ.get("PORT", 8100)))
     except SystemExit as e:
         tk.Tk().withdraw()
-        messagebox.showerror("Nasdaq 100", str(e))
+        messagebox.showerror("Volatilistat", str(e))
         return
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
     root = tk.Tk()
-    root.title("Nasdaq 100 — tableau de bord")
+    root.title("Volatilistat")
+    try:                                    # emblème dans la fenêtre et la barre des tâches
+        from pathlib import Path
+        logo = tk.PhotoImage(file=str(Path(__file__).with_name("volatilistat-128.png"))).subsample(2, 2)
+        root.iconphoto(True, logo)
+    except Exception:
+        logo = None
     root.resizable(False, False)
     pad = {"padx": 16}
-    tk.Label(root, text="Nasdaq 100", font=("Helvetica", 18, "bold")).pack(anchor="w", pady=(14, 2), **pad)
+    head = tk.Frame(root)
+    head.pack(anchor="w", pady=(14, 2), **pad)
+    if logo is not None:
+        tk.Label(head, image=logo).pack(side="left", padx=(0, 10))
+    tk.Label(head, text="Volatilistat", font=("Helvetica", 20, "bold")).pack(side="left")
+    tk.Label(head, text="  Nasdaq 100", fg="#555").pack(side="left")
     tk.Label(root, text=f"Le tableau de bord tourne sur cet ordinateur : {url}", fg="#555").pack(anchor="w", **pad)
     status = tk.Label(root, text="Démarrage…", justify="left", wraplength=440)
     status.pack(anchor="w", pady=(10, 4), **pad)
