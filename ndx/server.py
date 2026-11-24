@@ -465,7 +465,9 @@ def make_handler(boot: Boot, password: str | None = None):
     return Handler
 
 
-def serve(port: int = 8100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
+def start(port: int = 8100, host: str = "127.0.0.1"):
+    """Ouvre le port (le suivant s'il est pris) et lance le chargement des données en arrière-plan.
+    Renvoie (serveur HTTP, adresse, état du démarrage) ; à l'appelant de lancer serve_forever()."""
     boot = Boot()
     password = os.environ.get("NDX_PASSWORD") or None
     httpd = None
@@ -477,9 +479,13 @@ def serve(port: int = 8100, open_browser: bool = True, host: str = "127.0.0.1") 
             print(f"  Port {p} déjà utilisé, essai du port {p + 1}…")
     if httpd is None:
         raise SystemExit(f"Aucun port libre entre {port} et {port + 19} : fermez les autres fenêtres du tableau de bord.")
-    port = p
     threading.Thread(target=boot.run, daemon=True).start()
-    url = f"http://localhost:{port}"
+    return httpd, f"http://localhost:{p}", boot
+
+
+def serve(port: int = 8100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
+    httpd, url, boot = start(port, host)
+    password = os.environ.get("NDX_PASSWORD") or None
     print(f"✓ Tableau de bord en direct : {url}   (écoute sur {host}{', protégé par mot de passe' if password else ''} · Ctrl+C pour arrêter)")
     print("  Les données se chargent en arrière-plan ; la page s'affiche dès qu'elles sont prêtes.")
     if open_browser:

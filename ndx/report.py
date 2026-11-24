@@ -12,7 +12,8 @@ import pandas as pd
 
 from .analysis import Analysis
 
-REPORTS_DIR = Path(__file__).resolve().parent.parent / "reports"
+from .data import DATA_DIR as _DATA_DIR
+REPORTS_DIR = _DATA_DIR.parent / "reports"
 TEMPLATE = Path(__file__).resolve().parent / "template.html"
 NY = ZoneInfo("America/New_York")
 

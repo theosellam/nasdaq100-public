@@ -7,7 +7,25 @@ testés sans biais du futur, et suivi de **votre** portefeuille. Tout tourne sur
 > Outil d'analyse uniquement — **pas un conseil en investissement**. Données Yahoo Finance (non officielles,
 > parfois en retard ou incomplètes), SEC EDGAR et Wikipedia.
 
-## Installation
+## Version application (sans installer Python)
+
+Dans la page **Releases** du dépôt (colonne de droite sur GitHub), téléchargez le fichier qui correspond à votre ordinateur :
+`Nasdaq100-Windows.zip`, `Nasdaq100-Mac-AppleSilicon.zip` (Mac M1, M2, M3…) ou `Nasdaq100-Mac-Intel.zip`.
+
+- **Mac** : décompressez, glissez **Nasdaq100** dans le dossier Applications et ouvrez-la. L'application n'est pas signée
+  par un développeur Apple : au premier lancement, macOS la bloque. Ouvrez alors **Réglages Système → Confidentialité
+  et sécurité**, puis cliquez sur **Ouvrir quand même** en bas de la page (une seule fois).
+- **Windows** : clic droit sur le ZIP → **Extraire tout**, puis double-clic sur **Nasdaq100.exe** dans le dossier extrait.
+  Si « Windows a protégé votre ordinateur » s'affiche : **Informations complémentaires → Exécuter quand même**.
+
+Une petite fenêtre « Nasdaq 100 » s'ouvre avec le navigateur : gardez-la ouverte pendant l'utilisation, **Quitter** arrête tout.
+Les données (dont vos positions) sont enregistrées dans `~/Library/Application Support/Nasdaq100` (Mac)
+ou `%APPDATA%\Nasdaq100` (Windows), bouton **Dossier des données** de la fenêtre.
+
+Pour publier une nouvelle version de l'application : `git tag v1.1 && git push --tags` — GitHub construit les trois
+versions (onglet **Actions**, ≈ 10 min) et les ajoute à la Release. Construction locale sur Mac : `bash packaging/build-mac.sh`.
+
+## Installation à partir du code (Python requis)
 
 Il faut **Python 3.11 à 3.13** (gratuit) et une connexion Internet.
 

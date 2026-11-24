@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import io
+import os
+import sys
 import json
 import threading
 import time
@@ -18,7 +20,28 @@ import yfinance as yf
 warnings.filterwarnings("ignore", message=".*inplace keyword.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+def _data_dir() -> Path:
+    """Dossier des données. Version « application » (empaquetée) : dossier de l'utilisateur, car le paquet est en
+    lecture seule ; version « code source » : dossier data/ du projet. NDX_DATA_DIR permet de forcer un dossier."""
+    if os.environ.get("NDX_DATA_DIR"):
+        return Path(os.environ["NDX_DATA_DIR"]).expanduser()
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).resolve().parent.parent / "data"
+    if sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support" / "Nasdaq100"
+    elif os.name == "nt":
+        base = Path(os.environ.get("APPDATA") or Path.home()) / "Nasdaq100"
+    else:
+        base = Path.home() / ".nasdaq100"
+    d = base / "data"
+    d.mkdir(parents=True, exist_ok=True)
+    seed = Path(getattr(sys, "_MEIPASS", "")) / "data" / "events.json"      # fichier modifiable livré avec l'application
+    if seed.exists() and not (d / "events.json").exists():
+        (d / "events.json").write_bytes(seed.read_bytes())
+    return d
+
+
+DATA_DIR = _data_dir()
 
 # macOS limite à 256 les fichiers ouverts par un programme lancé depuis le Terminal ; yfinance garde ouverte une
 # connexion à son cache par fil de téléchargement, d'où « unable to open database file » puis des erreurs réseau

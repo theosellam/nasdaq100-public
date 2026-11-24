@@ -15,3 +15,5 @@ data/fundamentals.json
 data/history/
 data/.yf_cache/
 data/journal/
+build/
+dist/
