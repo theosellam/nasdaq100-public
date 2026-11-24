@@ -231,9 +231,9 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
     <section class="card" id="ext-card" style="margin-bottom:16px">
       <div class="head"><div><h2>Hors séance — après-clôture, overnight, pré-ouverture</h2>
         <div class="sub" id="ext-sub">QQQ (réplique le Nasdaq 100 en pré/après-bourse) et future NQ=F (cote la nuit), en % de la dernière clôture de 16 h (New York)</div></div>
-        <div class="legend" id="lg-ext"></div></div>
+        <div class="legend" id="lg-sess"></div></div>
       <div class="ext-tiles" id="ext-tiles"></div>
-      <div id="chart-ext"></div>
+      <div id="chart-sess"></div>
       <div class="grid g2" style="margin-top:10px">
         <div><h3 id="ext-up-t">Plus fortes hausses hors séance</h3><table class="mini" id="ext-up"></table></div>
         <div><h3 id="ext-dn-t">Plus fortes baisses hors séance</h3><table class="mini" id="ext-dn"></table></div>
@@ -937,7 +937,7 @@ const SESS = {pre: "pré-ouverture", post: "après-clôture", overnight: "nuit",
 function renderExtended() {
   const E = D.extended, card = $("ext-card");
   if (!E || !E.chart?.times) { card.style.display = LIVE ? "" : "none";
-    $("chart-ext").innerHTML = `<div class="empty">${LIVE ? "Cotations hors séance indisponibles pour le moment." : "Disponible avec le serveur en direct."}</div>`; return; }
+    $("chart-sess").innerHTML = `<div class="empty">${LIVE ? "Cotations hors séance indisponibles pour le moment." : "Disponible avec le serveur en direct."}</div>`; return; }
   card.style.display = "";
   const C = E.chart, lastI = a => { let i = a.length - 1; while (i >= 0 && a[i] == null) i--; return i; };
   const iN = lastI(C.nq), iQ = lastI(C.qqq);
@@ -954,7 +954,7 @@ function renderExtended() {
     tile("^NDX implicite", fmtNum(E.ndx_implied, 0), `clôture ${fmtNum(E.ndx_close, 0)} × future`),
     tile("Titres hors séance", `${up} ▲ / ${dn} ▼`, `${Q.length} titres cotés en pré/après-bourse`),
   ].join("");
-  lineChart($("chart-ext"), $("lg-ext"), {dates: C.times, qqq: C.qqq, nq: C.nq},
+  lineChart($("chart-sess"), $("lg-sess"), {dates: C.times, qqq: C.qqq, nq: C.nq},
     [{key: "nq", label: "Future NQ=F", short: "NQ=F", color: "--series-1"}, {key: "qqq", label: "QQQ (pré/après-bourse)", short: "QQQ", color: "--series-2"}],
     {time: true, slots: C.times.length, bands: C.session, hourStep: 2, height: 240, fmtY: v => fmtPct(v, 1),
      refs: [{value: 0, label: "Clôture", legend: "Clôture de référence", color: "--muted"}],
