@@ -20,9 +20,14 @@ fi
 echo "Python utilisé : $PY ($("$PY" --version))"
 
 "$PY" -m venv .venv || { echo "Échec de la création de l'environnement .venv"; read -r -p "Entrée pour fermer…" _; exit 1; }
+echo "Installation des dépendances (≈ 1 min)…"
 .venv/bin/python -m pip install --upgrade pip --quiet
-.venv/bin/python -m pip install -r requirements.txt || { echo "Échec de l'installation des dépendances"; read -r -p "Entrée pour fermer…" _; exit 1; }
+.venv/bin/python -m pip install --quiet -r requirements.txt || { echo "Échec de l'installation des dépendances"; read -r -p "Entrée pour fermer…" _; exit 1; }
 chmod +x lancer-mac.command 2>/dev/null
 echo ""
-echo "✓ Installation terminée. Lancez maintenant « lancer-mac.command » (double-clic)."
-read -r -p "Appuyez sur Entrée pour fermer…" _
+if [ -n "$NDX_FROM_LAUNCHER" ]; then
+  echo "✓ Installation terminée. Démarrage du tableau de bord…"
+else
+  echo "✓ Installation terminée. Lancez maintenant « lancer-mac.command » (double-clic)."
+  read -r -p "Appuyez sur Entrée pour fermer…" _
+fi

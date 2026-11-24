@@ -17,8 +17,13 @@ if not defined PY (
 )
 echo Python utilise : %PY%
 %PY% -m venv .venv || ( echo Echec de la creation de .venv & pause & exit /b 1 )
+echo Installation des dependances, environ 1 min...
 .venv\Scripts\python.exe -m pip install --upgrade pip --quiet
-.venv\Scripts\python.exe -m pip install -r requirements.txt || ( echo Echec de l installation des dependances & pause & exit /b 1 )
+.venv\Scripts\python.exe -m pip install --quiet -r requirements.txt || ( echo Echec de l installation des dependances & pause & exit /b 1 )
 echo.
-echo Installation terminee. Lancez maintenant lancer-windows.bat (double-clic).
-pause
+if defined NDX_FROM_LAUNCHER (
+  echo Installation terminee. Demarrage du tableau de bord...
+) else (
+  echo Installation terminee. Lancez maintenant lancer-windows.bat - double-clic.
+  pause
+)

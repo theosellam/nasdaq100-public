@@ -13,4 +13,5 @@ data/*.csv
 data/analysts.json
 data/fundamentals.json
 data/history/
+data/.yf_cache/
 data/journal/

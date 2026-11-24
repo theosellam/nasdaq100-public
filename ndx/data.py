@@ -19,6 +19,13 @@ warnings.filterwarnings("ignore", message=".*inplace keyword.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Cache de yfinance (fuseaux horaires, cookie Yahoo) propre à cette copie du programme : deux copies lancées en même
+# temps se bloquaient sur le cache commun du Mac (« OperationalError: unable to open database file »).
+try:
+    (DATA_DIR / ".yf_cache").mkdir(parents=True, exist_ok=True)
+    yf.set_tz_cache_location(str(DATA_DIR / ".yf_cache"))
+except Exception:
+    pass
 INDEX_TICKER = "^NDX"
 CONSTITUENTS_URL = "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies"
 
@@ -40,12 +47,28 @@ CONTEXT_TICKERS = {"^VXN": "VXN (volatilité Nasdaq 100)", "^VIX": "VIX", "^TNX"
 _YF_LOCK = threading.RLock()
 
 
-def download(*args, **kwargs) -> pd.DataFrame:
+def download(tickers, *args, **kwargs) -> pd.DataFrame:
     """yf.download sérialisé : yfinance partage un état global entre ses téléchargements, et deux appels
     simultanés (rafraîchissement, tâches de fond, fiche d'un titre) font échouer tout le lot
-    (« 'NoneType' object is not subscriptable »)."""
+    (« 'NoneType' object is not subscriptable »). Les titres sans aucun cours après un téléchargement groupé
+    sont redemandés une fois, un par un (échecs ponctuels de Yahoo)."""
     with _YF_LOCK:
-        return yf.download(*args, **kwargs)
+        raw = yf.download(tickers, *args, **kwargs)
+        syms = tickers.split() if isinstance(tickers, str) else list(tickers)
+        if (len(syms) < 2 or raw is None or raw.empty or kwargs.get("group_by", "column") != "column"
+                or not isinstance(raw.columns, pd.MultiIndex) or "Close" not in raw.columns.get_level_values(0)):
+            return raw
+        got = raw["Close"].notna().any()
+        missing = [t for t in syms if not got.get(t, False)]
+        if not missing or len(missing) == len(syms):
+            return raw
+        try:
+            r2 = yf.download(missing, *args, **{**kwargs, "threads": False})
+            if r2 is not None and not r2.empty and isinstance(r2.columns, pd.MultiIndex):
+                raw = raw.combine_first(r2)
+        except Exception:
+            pass
+        return raw
 
 
 def _yahoo_symbol(ticker: str) -> str:
@@ -80,17 +103,6 @@ def fetch_prices(tickers: list[str], period: str = "2y", ohlc: bool = False):
     Avec ohlc=True, renvoie aussi les bougies {Open, High, Low, Close, Volume} du même téléchargement."""
     raw = download(tickers + [INDEX_TICKER], period=period, auto_adjust=True,
                       progress=False, threads=True, group_by="column")
-    got = raw["Close"].notna().any() if not raw.empty else pd.Series(dtype=bool)
-    missing = [t for t in tickers + [INDEX_TICKER] if not got.get(t, False)]
-    if missing and len(missing) < len(tickers) + 1:   # échec partiel : une seconde tentative pour les manquants
-        try:
-            r2 = download(missing, period=period, auto_adjust=True, progress=False, threads=False, group_by="column")
-            if not r2.empty:
-                if not isinstance(r2.columns, pd.MultiIndex):
-                    r2.columns = pd.MultiIndex.from_product([r2.columns, missing])
-                raw = raw.combine_first(r2)
-        except Exception:
-            pass
     close = raw["Close"].dropna(how="all")
     volume = raw["Volume"].reindex(close.index)
     close.index = pd.to_datetime(close.index).tz_localize(None)
