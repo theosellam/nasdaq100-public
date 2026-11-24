@@ -19,6 +19,47 @@ warnings.filterwarnings("ignore", message=".*inplace keyword.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
+# macOS limite à 256 les fichiers ouverts par un programme lancé depuis le Terminal ; yfinance garde ouverte une
+# connexion à son cache par fil de téléchargement, d'où « unable to open database file » puis des erreurs réseau
+# (« getaddrinfo() thread failed to start »). On relève la limite (sans effet sous Windows).
+try:
+    import resource
+    _soft, _hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    _target = 10240 if _hard == resource.RLIM_INFINITY else min(_hard, 10240)
+    if _soft < _target:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (_target, _hard))
+except Exception:
+    pass
+
+
+class _MemTzCache:
+    """Cache des fuseaux horaires des titres en mémoire. Celui de yfinance (SQLite) ouvre une connexion par fil
+    de téléchargement sans la refermer : quelques centaines de fichiers ouverts, puis plus rien ne fonctionne."""
+    def __init__(self):
+        self._d, self._lock = {}, threading.Lock()
+
+    def lookup(self, tkr):
+        return self._d.get(tkr)
+
+    def store(self, tkr, tz):
+        with self._lock:
+            if tz is None:
+                self._d.pop(tkr, None)
+            else:
+                self._d[tkr] = tz
+
+    @property
+    def tz_db(self):
+        return None
+
+
+try:
+    import yfinance.cache as _yfc
+    _yfc._TzCacheManager._tz_cache = _MemTzCache()
+except Exception:
+    pass
+YF_THREADS = 8          # fils de téléchargement simultanés (yfinance en ouvre sinon jusqu'à 2 × nb de cœurs)
 # Cache de yfinance (fuseaux horaires, cookie Yahoo) propre à cette copie du programme : deux copies lancées en même
 # temps se bloquaient sur le cache commun du Mac (« OperationalError: unable to open database file »).
 try:
@@ -52,6 +93,8 @@ def download(tickers, *args, **kwargs) -> pd.DataFrame:
     simultanés (rafraîchissement, tâches de fond, fiche d'un titre) font échouer tout le lot
     (« 'NoneType' object is not subscriptable »). Les titres sans aucun cours après un téléchargement groupé
     sont redemandés une fois, un par un (échecs ponctuels de Yahoo)."""
+    if kwargs.get("threads", True) is True:
+        kwargs["threads"] = YF_THREADS
     with _YF_LOCK:
         raw = yf.download(tickers, *args, **kwargs)
         syms = tickers.split() if isinstance(tickers, str) else list(tickers)
