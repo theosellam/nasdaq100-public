@@ -5,6 +5,7 @@ import io
 import json
 import threading
 import time
+import warnings
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -12,6 +13,10 @@ from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
+
+# yfinance utilise encore des options que pandas 3.1 annonce comme obsolètes : avertissements sans conséquence, masqués.
+warnings.filterwarnings("ignore", message=".*inplace keyword.*")
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 INDEX_TICKER = "^NDX"

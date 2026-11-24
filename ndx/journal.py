@@ -68,6 +68,8 @@ def evaluate(close: pd.DataFrame) -> dict:
         S = pd.read_sql("SELECT * FROM snap", c)
     if S.empty:
         return {"days": 0}
+    for col in ("price", "ndx", "fund_score", "lab_pct", "val_pct", "os_10j", "upside", "rr"):
+        S[col] = pd.to_numeric(S[col], errors="coerce")   # colonne entièrement vide (laboratoire pas encore construit) → float
     idx = close.index
     pos = {d.strftime("%Y-%m-%d"): i for i, d in enumerate(idx)}
     for h in HORIZONS:
