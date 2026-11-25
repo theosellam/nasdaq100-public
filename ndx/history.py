@@ -12,6 +12,7 @@ from __future__ import annotations
 import gzip
 import io
 import json
+import os
 import time
 import urllib.parse
 import urllib.request
@@ -41,8 +42,16 @@ RENAMES = {"FB": "META", "FISV": "FI", "WLTW": "WTW", "BBBY": None, "TWTR": None
            "ANSS": None, "SIRI": "SIRI", "DISCA": "WBD", "DISCK": None, "VIAC": "PARA", "CHKP": "CHKP"}
 
 
+def _sec_ua() -> str:
+    """La SEC demande d'identifier le client par un contact réel. On n'en invente pas : si l'utilisateur
+    renseigne NDX_SEC_CONTACT (ex. « Prénom Nom prenom@exemple.com »), il est utilisé, sinon le nom générique."""
+    contact = os.environ.get("NDX_SEC_CONTACT", "").strip()
+    return f"Volatilistat {contact}" if contact else UA
+
+
 def _get(url: str, timeout: int = 40) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Encoding": "gzip"})
+    ua = _sec_ua() if "sec.gov" in url else UA
+    req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept-Encoding": "gzip"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         b = r.read()
         return gzip.decompress(b) if r.headers.get("Content-Encoding") == "gzip" else b
@@ -283,15 +292,36 @@ def sec_extract(facts: dict) -> dict:
     return out
 
 
+def _cik_map() -> dict:
+    """Table titre → CIK de la SEC, mise en cache : les CIK ne changent pas, une copie ancienne suffit."""
+    cache = SEC_DIR / "company_tickers.json"
+    try:
+        raw = _get("https://www.sec.gov/files/company_tickers.json")
+        json.loads(raw)
+        cache.write_bytes(raw)
+    except Exception:
+        if not cache.exists():
+            raise
+        raw = cache.read_bytes()
+    return {v["ticker"].replace(".", "-"): v["cik_str"] for v in json.loads(raw).values()}
+
+
 def fetch_sec(tickers: list[str]) -> dict:
+    """Comptes trimestriels SEC. En cas de refus (HTTP 403…), on renvoie l'erreur au lieu d'interrompre :
+    le laboratoire et le swing se construisent alors sans les fondamentaux (copies locales conservées)."""
     SEC_DIR.mkdir(parents=True, exist_ok=True)
-    cik = {v["ticker"].replace(".", "-"): v["cik_str"] for v in json.loads(_get("https://www.sec.gov/files/company_tickers.json")).values()}
+    try:
+        cik = _cik_map()
+    except Exception as e:
+        have = [t for t in tickers if (SEC_DIR / f"{t}.json").exists()]
+        return {"ok": have, "missing": [t for t in tickers if t not in have], "error": f"{type(e).__name__}: {e}"}
     ok, missing = [], []
+    refused = {"n": 0}
 
     def one(t):
         c = cik.get(t)
-        if not c:
-            return t, False
+        if not c or refused["n"] >= 5:          # la SEC refuse en bloc : inutile d'insister titre par titre
+            return t, (SEC_DIR / f"{t}.json").exists()
         for attempt in range(3):
             try:
                 facts = json.loads(_get(f"https://data.sec.gov/api/xbrl/companyfacts/CIK{c:010d}.json", timeout=60))
@@ -300,14 +330,20 @@ def fetch_sec(tickers: list[str]) -> dict:
                     return t, False
                 (SEC_DIR / f"{t}.json").write_text(json.dumps(ex), encoding="utf-8")
                 return t, True
-            except Exception:
+            except Exception as e:
+                if getattr(e, "code", None) in (401, 403):
+                    refused["n"] += 1
+                    break
                 time.sleep(1.5 * (attempt + 1))
-        return t, False
+        return t, (SEC_DIR / f"{t}.json").exists()
 
     with ThreadPoolExecutor(max_workers=4) as pool:   # la SEC limite à 10 requêtes/seconde
         for t, good in pool.map(one, tickers):
             (ok if good else missing).append(t)
-    return {"ok": ok, "missing": missing}
+    out = {"ok": ok, "missing": missing}
+    if refused["n"] >= 5:
+        out["error"] = "la SEC refuse les requêtes (HTTP 403)"
+    return out
 
 
 def load_sec(t: str) -> dict | None:
@@ -367,7 +403,12 @@ def build_all(current: list[str], log=print) -> dict:
     fetch_ohlcv(priced)
     log("→ Comptes trimestriels SEC EDGAR (≈ 2 min)…")
     sec = fetch_sec(priced)
-    log(f"  {len(sec['ok'])} sociétés couvertes ; sans comptes US GAAP : {', '.join(sec['missing'][:20])}")
+    if sec.get("error"):
+        log(f"  ⚠ SEC EDGAR indisponible ({sec['error']}) : on continue avec les comptes déjà téléchargés "
+            f"({len(sec['ok'])} sociétés). Le swing n'en dépend pas ; les facteurs fondamentaux du laboratoire seront incomplets. "
+            "Si le refus persiste, renseignez votre contact dans la variable NDX_SEC_CONTACT (exigence de la SEC).")
+    else:
+        log(f"  {len(sec['ok'])} sociétés couvertes ; sans comptes US GAAP : {', '.join(sec['missing'][:20])}")
     log("→ Historique des analystes et des résultats (Yahoo)…")
     fetch_analyst_and_earnings(priced)
     info = {"built": pd.Timestamp.now().isoformat(timespec="seconds"), "universe": len(uni), "priced": len(priced),

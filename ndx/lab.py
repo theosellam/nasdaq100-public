@@ -432,6 +432,9 @@ def entry_study(close: pd.DataFrame, mem: pd.DataFrame, states: dict, analysts: 
                     row["an_net"] = ((w["Action"] == "up").sum() - (w["Action"] == "down").sum()) if len(w) else 0
                 ev.append(row)
     E = pd.DataFrame(ev)
+    for c, dflt in (("vscore", np.nan), ("vflag", False), ("vn", 0), ("an_net", 0)):   # sans comptes SEC : colonnes vides
+        if c not in E:
+            E[c] = dflt
     E["valid"] = (E["vscore"] >= 0.65) & (~E["vflag"].fillna(False).astype(bool)) & (E["vn"] >= 5)
     E["trap"] = (E["vscore"] < 0.45) | (E["vflag"].fillna(False).astype(bool))
     E["valid_an"] = E["valid"] & (E["an_net"].fillna(0) >= 0)
@@ -504,6 +507,11 @@ def build(current: list[str], log=print) -> dict:
             states[t] = fund_states(sec)
     log("→ Panel mensuel des facteurs (le mois en cours est évalué à la dernière séance)…")
     P = build_panel(close, macro, mem, states, analysts, earnings)
+    if not states:
+        log("  ⚠ aucun compte SEC disponible : facteurs fondamentaux vides (les autres facteurs restent testés)")
+    for c in list(FACTORS) + ["rev", "fcf", "ni", "mcap"]:      # colonnes attendues même sans comptes SEC
+        if c not in P:
+            P[c] = np.nan
     log(f"  {P['date'].nunique()} mois × ~{int(P.groupby('date').size().mean())} titres = {len(P)} observations")
     log("→ Tests statistiques des facteurs…")
     fstats, ics = factor_stats(P)

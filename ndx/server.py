@@ -145,9 +145,14 @@ class State:
                     self.lab_status = "mise à jour des cours historiques…"
                     history.update_recent_prices()
                 self.lab_status = "calcul des tests…"
-                self.lab = lab.build(tickers)
+                lab_err = None
+                try:
+                    self.lab = lab.build(tickers)
+                except Exception as e:                 # le swing ne dépend pas du laboratoire : on le construit quand même
+                    traceback.print_exc()
+                    lab_err = f"{type(e).__name__}: {e}"
                 self._swing_job(tickers)
-                self.lab_status = "prêt"
+                self.lab_status = "prêt" if not lab_err else f"erreur du laboratoire ({lab_err}) — swing construit"
                 self.pf_signals = None
                 self.cached = None
             except Exception as e:
