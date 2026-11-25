@@ -8,7 +8,7 @@ ROOT = Path(SPECPATH).parent
 VERSION = next(l.split('"')[1] for l in (ROOT / "ndx" / "version.py").read_text(encoding="utf-8").splitlines()
                if l.startswith("__version__"))
 datas = [(str(ROOT / "ndx" / "template.html"), "ndx"), (str(ROOT / "ndx" / "volatilistat-128.png"), "ndx"),
-         (str(ROOT / "data" / "events.json"), "data")]
+         (str(ROOT / "data" / "events.json"), "data"), (str(ROOT / "data" / "constituents.csv"), "data")]
 ICON = str(ROOT / "packaging" / "icon" / "volatilistat.png")   # converti en .icns / .ico par PyInstaller (Pillow)
 binaries, hiddenimports = [], collect_submodules("ndx")
 for pkg in ("curl_cffi", "yfinance", "tzdata", "certifi"):

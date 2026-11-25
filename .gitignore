@@ -10,6 +10,7 @@ data/private/
 
 # Données de marché téléchargées au premier lancement (Yahoo Finance, SEC, Wikipedia)
 data/*.csv
+!data/constituents.csv
 data/analysts.json
 data/fundamentals.json
 data/history/

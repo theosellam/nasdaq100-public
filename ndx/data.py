@@ -16,6 +16,22 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
+
+def _use_bundled_certificates() -> None:
+    """Certificats HTTPS : l'application autonome ne voit pas toujours ceux du système (Mac sans
+    « Install Certificates », réseau d'entreprise…) → on utilise ceux de certifi, livrés avec elle."""
+    try:
+        import ssl
+        import certifi
+    except ImportError:
+        return
+    if getattr(sys, "frozen", False) or not ssl.get_default_verify_paths().cafile:
+        os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+        ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
+
+
+_use_bundled_certificates()
+
 # yfinance utilise encore des options que pandas 3.1 annonce comme obsolètes : avertissements sans conséquence, masqués.
 warnings.filterwarnings("ignore", message=".*inplace keyword.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -35,9 +51,11 @@ def _data_dir() -> Path:
         base = Path.home() / ".volatilistat"
     d = base / "data"
     d.mkdir(parents=True, exist_ok=True)
-    seed = Path(getattr(sys, "_MEIPASS", "")) / "data" / "events.json"      # fichier modifiable livré avec l'application
-    if seed.exists() and not (d / "events.json").exists():
-        (d / "events.json").write_bytes(seed.read_bytes())
+    # fichiers livrés avec l'application : événements (modifiable) et composition de secours du Nasdaq 100
+    for name in ("events.json", "constituents.csv"):
+        seed = Path(getattr(sys, "_MEIPASS", "")) / "data" / name
+        if seed.exists() and not (d / name).exists():
+            (d / name).write_bytes(seed.read_bytes())
     return d
 
 
