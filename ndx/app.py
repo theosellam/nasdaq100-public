@@ -34,7 +34,7 @@ def main() -> None:
     import tkinter as tk
     from tkinter import messagebox
 
-    from . import server
+    from . import server, version
     from .data import DATA_DIR
 
     try:
@@ -61,13 +61,18 @@ def main() -> None:
     if logo is not None:
         tk.Label(head, image=logo).pack(side="left", padx=(0, 10))
     tk.Label(head, text="Volatilistat", font=("Helvetica", 20, "bold")).pack(side="left")
-    tk.Label(head, text="  Nasdaq 100", fg="#555").pack(side="left")
+    tk.Label(head, text=f"  Nasdaq 100 · version {version.__version__}", fg="#555").pack(side="left")
     tk.Label(root, text=f"Le tableau de bord tourne sur cet ordinateur : {url}", fg="#555").pack(anchor="w", **pad)
     status = tk.Label(root, text="Démarrage…", justify="left", wraplength=440)
     status.pack(anchor="w", pady=(10, 4), **pad)
     tk.Label(root, text="Gardez cette fenêtre ouverte tant que vous utilisez le tableau de bord.\n"
                         "Outil d'analyse uniquement — pas un conseil en investissement.",
              fg="#777", justify="left", font=("Helvetica", 11)).pack(anchor="w", pady=(4, 10), **pad)
+
+    upd = tk.Frame(root)                     # nouvelle version disponible (masqué tant qu'il n'y en a pas)
+    upd_label = tk.Label(upd, fg="#1F6F63", font=("Helvetica", 12, "bold"), justify="left")
+    upd_label.pack(side="left")
+    tk.Button(upd, text="Télécharger", command=lambda: webbrowser.open(version.info()["url"])).pack(side="left", padx=8)
 
     bar = tk.Frame(root)
     bar.pack(fill="x", pady=(0, 14), **pad)
@@ -94,6 +99,10 @@ def main() -> None:
             txt = "✓ Données prêtes — cours rafraîchis automatiquement." + (
                 f"\nLaboratoire : {lab}" if lab and lab != "prêt" else "")
         status.config(text=txt)
+        u = version.info()
+        if u["newer"] and not upd.winfo_ismapped():
+            upd_label.config(text=f"Nouvelle version disponible : {u['latest']}")
+            upd.pack(anchor="w", pady=(0, 10), before=bar, **pad)
         root.after(2000, refresh_status)
 
     refresh_status()

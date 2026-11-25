@@ -67,6 +67,8 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 @keyframes sp { to { transform: rotate(360deg); } }
 #tz { width: auto; max-width: 220px; font: inherit; font-size: 12.5px; padding: 3px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface, transparent); color: var(--text); }
 .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+.update { margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: var(--wash); border-left: 3px solid var(--jade, #1F6F63); display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+.update a { font-weight: 600; } .update .x { margin-left: auto; background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 15px; }
 .banner { margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: var(--wash); border-left: 3px solid var(--warning); display: none; }
 
 .tabs { display: flex; gap: 4px; margin: 16px 0 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -224,6 +226,7 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
 
 <main>
   <div class="banner" id="banner"></div>
+  <div class="update" id="update" role="status"></div>
   <div class="tabs" id="tabs">
     <button data-t="overview" class="on">Vue d'ensemble</button>
     <button data-t="opps">Opportunités</button>
@@ -1936,6 +1939,20 @@ async function load(force) {
   } finally { $("refresh").classList.remove("loading"); $("refresh").disabled = false; }
 }
 $("refresh").onclick = () => load(true);
+async function checkUpdate() {                       // nouvelle version publiée sur GitHub ?
+  try {
+    const u = await (await fetch("/api/update")).json();
+    const el = $("update");
+    if (!u.newer || localStorage.getItem("ndx_update_hidden") === u.latest) { el.style.display = "none"; return; }
+    el.innerHTML = `<span>Nouvelle version de Volatilistat disponible : <b>${esc(u.latest)}</b> (vous avez ${esc(u.current)}).</span>
+      <a href="${esc(u.url)}" target="_blank" rel="noopener">Télécharger la mise à jour</a>
+      <span class="sub">Vos positions et vos données sont conservées.</span>
+      <button class="x" title="Masquer jusqu'à la prochaine version" aria-label="Masquer">×</button>`;
+    el.querySelector(".x").onclick = () => { localStorage.setItem("ndx_update_hidden", u.latest); el.style.display = "none"; };
+    el.style.display = "flex";
+  } catch (e) {}
+}
+if (LIVE) { setTimeout(checkUpdate, 8000); setInterval(checkUpdate, 3600000); }
 let timer = null;
 $("auto").onchange = () => { clearInterval(timer); if ($("auto").checked) timer = setInterval(() => load(false), 60000); localStorage.setItem("ndx-auto", $("auto").checked ? "1" : "0"); };
 

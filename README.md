@@ -25,8 +25,12 @@ Une petite fenêtre « Volatilistat » s'ouvre avec le navigateur : gardez-la ou
 Les données (dont vos positions) sont enregistrées dans `~/Library/Application Support/Volatilistat` (Mac)
 ou `%APPDATA%\Volatilistat` (Windows), bouton **Dossier des données** de la fenêtre.
 
-Pour publier une nouvelle version de l'application : `git tag v1.1 && git push --tags` — GitHub construit les trois
-versions (onglet **Actions**, ≈ 10 min) et les ajoute à la Release. Construction locale sur Mac : `bash packaging/build-mac.sh`.
+**Mises à jour** : quand une nouvelle version est publiée, un bandeau l'annonce dans le tableau de bord et dans la fenêtre,
+avec un lien de téléchargement. Remplacez simplement l'ancienne application : vos positions et vos données sont conservées.
+
+Pour publier une nouvelle version de l'application : changez `__version__` dans `ndx/version.py`, commitez, puis
+`git tag v1.3 && git push && git push --tags` (l'étiquette doit correspondre à `__version__`, sinon la construction s'arrête).
+GitHub construit les trois versions (onglet **Actions**, ≈ 10 min) et les ajoute à la Release. Construction locale sur Mac : `bash packaging/build-mac.sh`.
 
 ## Installation à partir du code (Python requis)
 
@@ -164,5 +168,7 @@ Outil d'analyse uniquement — pas un conseil en investissement.
 ## Confidentialité
 - Aucune donnée personnelle ne quitte votre ordinateur : le programme interroge seulement Yahoo Finance, SEC EDGAR
   et Wikipedia pour les données de marché, avec des requêtes anonymes.
+- Vérification des mises à jour : une requête anonyme à l'API publique de GitHub au démarrage puis toutes les 12 h
+  (désactivable avec la variable d'environnement `NDX_NO_UPDATE_CHECK=1`).
 - `data/private/` (positions, garde-fous, relevés) est exclu de git. Si vous publiez votre propre copie, vérifiez
   avec `git status` qu'aucun fichier de ce dossier n'apparaît.

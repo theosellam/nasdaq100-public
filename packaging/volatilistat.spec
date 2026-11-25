@@ -5,6 +5,8 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 ROOT = Path(SPECPATH).parent
+VERSION = next(l.split('"')[1] for l in (ROOT / "ndx" / "version.py").read_text(encoding="utf-8").splitlines()
+               if l.startswith("__version__"))
 datas = [(str(ROOT / "ndx" / "template.html"), "ndx"), (str(ROOT / "ndx" / "volatilistat-128.png"), "ndx"),
          (str(ROOT / "data" / "events.json"), "data")]
 ICON = str(ROOT / "packaging" / "icon" / "volatilistat.png")   # converti en .icns / .ico par PyInstaller (Pillow)
@@ -22,5 +24,5 @@ exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="Volatilistat", consol
 coll = COLLECT(exe, a.binaries, a.datas, name="Volatilistat", upx=False)
 if sys.platform == "darwin":
     app = BUNDLE(coll, name="Volatilistat.app", icon=ICON, bundle_identifier="fr.volatilistat.app",
-                 info_plist={"CFBundleDisplayName": "Volatilistat", "CFBundleShortVersionString": "1.0",
+                 info_plist={"CFBundleDisplayName": "Volatilistat", "CFBundleShortVersionString": VERSION,
                              "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "11.0"})

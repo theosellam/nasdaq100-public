@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 
-from . import analysis, data, history, indicators as ind, journal, lab, portfolio, report, swing
+from . import analysis, data, history, indicators as ind, journal, lab, portfolio, report, swing, version
 from .themes import THEMES
 
 LIVE_TTL = 15            # secondes : en dessous, on resservira les mêmes cours
@@ -475,7 +475,9 @@ def make_handler(boot: Boot, password: str | None = None):
             q = parse_qs(url.query)
             state = boot.state
             try:
-                if url.path.startswith("/api/") and state is None:
+                if url.path == "/api/update":          # disponible même pendant le démarrage
+                    self._json(version.info())
+                elif url.path.startswith("/api/") and state is None:
                     self._json({"loading": True, "status": boot.status, "error": boot.error}, 503)
                 elif url.path in ("/", "/index.html"):
                     self._send(200, report.render(None).encode(), "text/html; charset=utf-8")
@@ -528,6 +530,7 @@ def start(port: int = 8100, host: str = "127.0.0.1"):
     """Ouvre le port (le suivant s'il est pris) et lance le chargement des données en arrière-plan.
     Renvoie (serveur HTTP, adresse, état du démarrage) ; à l'appelant de lancer serve_forever()."""
     boot = Boot()
+    version.start_background_check()
     password = os.environ.get("NDX_PASSWORD") or None
     httpd = None
     for p in range(port, port + 20):           # port occupé (autre copie déjà lancée) : on prend le suivant
@@ -545,7 +548,7 @@ def start(port: int = 8100, host: str = "127.0.0.1"):
 def serve(port: int = 8100, open_browser: bool = True, host: str = "127.0.0.1") -> None:
     httpd, url, boot = start(port, host)
     password = os.environ.get("NDX_PASSWORD") or None
-    print(f"✓ Tableau de bord en direct : {url}   (écoute sur {host}{', protégé par mot de passe' if password else ''} · Ctrl+C pour arrêter)")
+    print(f"✓ Volatilistat {version.__version__} — tableau de bord en direct : {url}   (écoute sur {host}{', protégé par mot de passe' if password else ''} · Ctrl+C pour arrêter)")
     print("  Les données se chargent en arrière-plan ; la page s'affiche dès qu'elles sont prêtes.")
     if open_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
