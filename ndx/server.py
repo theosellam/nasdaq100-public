@@ -278,10 +278,10 @@ class State:
                 out["swing"] = {"error": f"Swing : {type(e).__name__}: {e}"}
             phase("desk : screener intraday, ordres paper et registre")
             try:
-                out["intraday"] = report.clean(intraday.screen(self.live_bars, self.result.stocks, self.extended))
+                out["screener"] = report.clean(intraday.screen(self.live_bars, self.result.stocks, self.extended))
             except Exception as e:
                 traceback.print_exc()
-                out["intraday"] = {"error": f"Screener intraday : {type(e).__name__}: {e}"}
+                out["screener"] = {"error": f"Screener intraday : {type(e).__name__}: {e}"}
             try:
                 self.desk_prices = self._prices()
                 fired = desk.mark(self.desk_prices, self._index_level())

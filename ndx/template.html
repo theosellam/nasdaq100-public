@@ -1956,9 +1956,9 @@ segmented($("seg-lab-ent"), [["x60", "60 séances"], ["x20", "20 séances"]], la
 segmented($("seg-lab-today"), [["top", "Les mieux notés"], ["bottom", "Les moins bien notés"], ["held", "Mes titres"]], labToday, k => { labToday = k; renderLab(); });
 // ── Desk (paper trading)
 let dkScr = "long";
-const dkSig = k => D.intraday?.signals?.[k] || {label: k, side: "long", rule: ""};
+const dkSig = k => D.screener?.signals?.[k] || {label: k, side: "long", rule: ""};
 function renderDesk() {
-  const K = D.desk, I = D.intraday || {};
+  const K = D.desk, I = D.screener || {};
   if (!K || K.error) { $("dk-tiles").innerHTML = `<div class="alert">${esc(K?.error || "Desk indisponible")}</div>`; return; }
   const B = K.book, RV = K.review || {}, S = RV.summary || {};
   const tile = (l, v, n, c = "") => `<div class="card tile"><div class="label">${l}</div><div class="value ${c}">${v}</div><div class="note">${n || ""}</div></div>`;
