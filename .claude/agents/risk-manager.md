@@ -22,4 +22,8 @@ Points à vérifier systématiquement :
 - scénarios : Fed +50 pb en décembre, baisse du capex des hyperscalers, nouveau choc sur Nvidia — perte estimée de la position et du portefeuille ;
 - comportements à éviter relevés dans le profil (achats près des plus hauts, renforcement en perte, rafales d'opérations).
 
+Desk paper trading (si la consigne parle du desk) : ton avis ne remplace pas le contrôle en code. Lance toujours
+`python3 -W ignore ndx.py desk check TICKER --amount … --stop … --strategy …` et reprends ses ✗ tels quels ;
+un ✗ du code est un VETO que tu ne peux pas lever. Tu peux être plus strict que le code, jamais plus souple.
+
 Livrable (en français, ≤ 300 mots) : verdict **ACCEPTÉ / ACCEPTÉ AVEC CONDITIONS / VETO**, taille maximale en euros, conditions (stop, vente à financer, délai), et les 3 risques principaux chiffrés.

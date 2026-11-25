@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 
-from . import analysis, data, history, indicators as ind, journal, lab, portfolio, report, swing, version
+from . import analysis, data, desk, history, indicators as ind, intraday, journal, lab, portfolio, report, swing, version
 from .themes import THEMES
 
 LIVE_TTL = 15            # secondes : en dessous, on resservira les mêmes cours
@@ -56,6 +56,9 @@ class State:
         self.swing: dict | None = None
         self.swing_journal = None
         self.swing_journal_t = 0.0
+        self.desk_prices: dict[str, float] = {}
+        self.desk_review = None
+        self.desk_review_t = 0.0
 
     def _portfolio(self) -> dict | None:
         """Portefeuille personnel (si des relevés sont présents dans data/private/imports)."""
@@ -273,12 +276,85 @@ class State:
             except Exception as e:
                 traceback.print_exc()
                 out["swing"] = {"error": f"Swing : {type(e).__name__}: {e}"}
+            phase("desk : screener intraday, ordres paper et registre")
+            try:
+                out["intraday"] = report.clean(intraday.screen(self.live_bars, self.result.stocks, self.extended))
+            except Exception as e:
+                traceback.print_exc()
+                out["intraday"] = {"error": f"Screener intraday : {type(e).__name__}: {e}"}
+            try:
+                self.desk_prices = self._prices()
+                fired = desk.mark(self.desk_prices, self._index_level())
+                if fired:
+                    self.desk_review = None
+                out["desk"] = report.clean(self.desk_payload(fired))
+            except Exception as e:
+                traceback.print_exc()
+                out["desk"] = {"error": f"Desk : {type(e).__name__}: {e}"}
             out["lab"] = report.clean(self._lab_payload())
             out["journal"] = report.clean(self.journal_eval)
             out["analystsLoading"] = self.analysts_loading
             out["error"] = self.error
             self.cached = out
             return out
+
+    # ── Desk (paper trading)
+    def _prices(self) -> dict[str, float]:
+        """Dernier cours connu de chaque titre (Nasdaq 100 + titres hors indice suivis)."""
+        out = {}
+        for df in (self.xclose, self.close):
+            if df is None or df.empty:
+                continue
+            last = df.ffill().iloc[-1]
+            out.update({str(k): float(v) for k, v in last.items() if pd.notna(v) and v > 0})
+        return out
+
+    def _index_level(self) -> float | None:
+        s = self.close[data.INDEX_TICKER].dropna() if data.INDEX_TICKER in self.close else None
+        return float(s.iloc[-1]) if s is not None and len(s) else None
+
+    def _earnings(self) -> dict[str, str]:
+        st = self.result.stocks if self.result is not None else None
+        if st is None or "earnings_date" not in st:
+            return {}
+        return {t: str(d) for t, d in st["earnings_date"].items() if isinstance(d, str) and d}
+
+    def desk_eval(self) -> dict:
+        return desk.evaluate(swing.EVENTS_FILE)
+
+    def desk_payload(self, fired: list | None = None) -> dict:
+        ev = self.desk_eval()
+        now = time.time()
+        if self.desk_review is None or now - self.desk_review_t > 300:
+            self.desk_review = desk.review(self.close)
+            self.desk_review_t = now
+        eq = desk.equity_curve()
+        R = desk.rules()
+        strategies = [{"key": s["key"], "label": s["label"], "validated": s["validated"]} for s in ev.get("setups", [])]
+        strategies += [{"key": f"intraday:{k}", "label": f"Intraday · {v[0]}", "validated": False}
+                       for k, v in intraday.SIGNALS.items() if v[1] == "long"]
+        strategies.append({"key": "discrétionnaire", "label": "Discrétionnaire", "validated": False})
+        return {"book": desk.book(self.desk_prices, R), "rules": R, "evaluator": ev, "review": self.desk_review,
+                "equity": {"date": eq["date"].tolist(), "equity": eq["equity"].tolist(), "index": eq["index"].tolist()},
+                "strategies": strategies, "fired": fired or [], "paper_only": True}
+
+    def desk_order(self, body: dict, dry: bool = False) -> dict:
+        if self.result is None:
+            self.refresh()
+        prices = self.desk_prices or self._prices()
+        val = desk.validated_map(self.desk_eval())
+        if dry:
+            return desk.check(body, prices, val, self._earnings())
+        res = desk.submit(body, prices, val, self._earnings(), self._index_level())
+        self.desk_review, self.cached = None, None
+        return res
+
+    def desk_note(self, body: dict) -> dict:
+        t = str(body.get("ticker", "")).upper().replace(".", "-")
+        res = desk.note(t, body.get("action", ""), body.get("reason", ""), body.get("actor") or "vous", body.get("strategy"),
+                        (self.desk_prices or self._prices()).get(t), self._index_level())
+        self.desk_review, self.cached = None, None
+        return res
 
     def _extended_payload(self) -> dict:
         """Pré-ouverture, après-clôture et overnight (future NQ=F) pour le tableau de bord."""
@@ -494,6 +570,8 @@ def make_handler(boot: Boot, password: str | None = None):
                     saxo = bool(portfolio.latest_file("AggregatedAmounts_*.xlsx") or portfolio.latest_file("Holdings_*.pdf"))
                     self._json({**portfolio.load_manual(), "saxo": saxo, "themes": [
                         [k, THEMES[k]["label"] if k in THEMES else portfolio.SPACE_LABEL] for k in portfolio.THEME_CHOICES]})
+                elif url.path == "/api/desk":
+                    self._json(report.clean(state.desk_payload()))
                 elif url.path == "/api/refresh-analysts":
                     state.refresh_analysts()
                     self._json({"ok": True})
@@ -512,6 +590,17 @@ def make_handler(boot: Boot, password: str | None = None):
                     self._json({"error": "Requête trop volumineuse"}, 413)
                     return
                 body = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                if url.path in ("/api/desk/order", "/api/desk/check", "/api/desk/note"):
+                    if boot.state is None:
+                        self._json({"error": "Données en cours de chargement, réessayez dans un instant."}, 503)
+                    elif url.path == "/api/desk/note":
+                        try:
+                            self._json(boot.state.desk_note(body))
+                        except ValueError as e:
+                            self._json({"error": str(e)}, 400)
+                    else:
+                        self._json(report.clean(boot.state.desk_order(body, dry=url.path.endswith("check"))))
+                    return
                 if url.path == "/api/positions":
                     res = portfolio.save_manual(body)
                     if res.get("ok") and boot.state is not None:

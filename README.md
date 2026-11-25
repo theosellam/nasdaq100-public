@@ -111,6 +111,34 @@ python3 ndx.py fundamentals        # recharger uniquement les états financiers 
 python3 ndx.py report              # export HTML statique (reports/nasdaq100.html)
 ```
 
+## Desk : un fonds à une personne, en paper trading (onglet « Desk (paper) », `python3 ndx.py desk`)
+
+Inspiré de l'organisation d'un fonds : un décideur entouré de « desks » qui le contrôlent. Ici, **le PM décide quoi
+tenter, et le code décide de ce qui atteint le courtier**. Aucun ordre réel n'est jamais envoyé : le courtier est fictif.
+
+| Desk | Qui | Rôle |
+|---|---|---|
+| Données | code | cours en direct, bougies, fondamentaux, analystes |
+| PM | vous, ou l'agent `pm` de Claude Code | décide quoi tenter, écrit la raison |
+| Analystes | agents `bull-analyst` et `bear-analyst` (`/comite TICKER`) | thèse et anti-thèse |
+| Comité | code | une stratégie n'est validée que si elle tient **hors échantillon** (walk-forward annuel + 30 % d'historique réservés) |
+| Risk manager | **code** (et hook Claude Code) | refuse tout ordre hors limites, avant le courtier |
+| Exécution | courtier fictif | exécution au dernier cours (+ 5 pb), stops et objectifs surveillés à chaque rafraîchissement |
+| Back office | registre | toutes les décisions (y compris « attendre » et les ordres refusés), revues à 5 et 20 séances contre le Nasdaq 100 |
+
+**Limites par défaut** (`data/private/desk/rules.json`, modifiables par vous seul) : 5 % maximum par ligne pour une
+stratégie validée, **2 % pour une stratégie non validée** (screener intraday, discrétionnaire), perte au stop ≤ 1 % du
+compte, stop obligatoire, 15 positions, 10 % de liquidités, 10 achats par semaine, pause après une journée à −3 %,
+pas d'achat dans les 2 jours avant des résultats.
+
+**Screener intraday** : gap, mouvement depuis l'ouverture, position dans le range, volume relatif corrigé de l'heure,
+force relative contre l'indice, cassures de 20 séances. Ces signaux ne sont pas validés sur l'historique (il faudrait des
+années de bougies de 5 minutes) : le risk manager les plafonne donc à 2 %.
+
+Avec Claude Code, `CLAUDE.md` fixe les règles du fonds et `.claude/settings.json` installe un hook qui refuse tout
+`desk buy` hors limites et toute écriture directe dans `data/private/desk/`. Les limites vivent hors du modèle : une
+réponse sûre d'elle mais fausse ne peut pas les franchir.
+
 ## Laboratoire de signaux (onglet « Laboratoire », `python3 ndx.py lab`)
 Teste chaque signal sur l'historique **sans information du futur** :
 - composition historique du Nasdaq 100 (Wikipedia, trimestrielle depuis 2020) pour limiter le biais du survivant ;

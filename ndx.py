@@ -388,6 +388,8 @@ def main() -> None:
     r = sub.add_parser("rank"); r.add_argument("--by", default="score"); r.add_argument("-n", type=int, default=100); r.add_argument("--asc", action="store_true")
     rp = sub.add_parser("report"); rp.add_argument("--out", default=None)
     sub.add_parser("all")
+    from ndx import desk_cli
+    desk_cli.add_parser(sub)
     args = p.parse_args()
     cmd = args.cmd or "serve"
 
@@ -397,6 +399,8 @@ def main() -> None:
                      not getattr(args, "no_browser", False) and not os.environ.get("NDX_HEADLESS"),
                      getattr(args, "host", os.environ.get("HOST", "127.0.0.1")))
         return
+    if cmd == "desk":
+        sys.exit(desk_cli.run(args))
     if cmd == "analysts":
         tickers = pd.read_csv(data.CONSTITUENTS_FILE)["ticker"].tolist()
         print("→ Prévisions des analystes…")

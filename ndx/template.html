@@ -174,6 +174,13 @@ td.l small { color: var(--muted); }
 .checks li.h { grid-template-columns: 1fr auto; font-weight: 600; border-bottom: 0; padding-top: 10px; }
 .checks .ic.ok { color: var(--good); } .checks .ic.ko { color: var(--critical); } .checks .ic.na { color: var(--muted); }
 .checks .v { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+#dk-rules { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; } #dk-rules .fact { padding: 6px 10px; font-size: 13px; }
+.dk-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.dk-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-secondary); }
+.dk-form .wide { grid-column: 1 / -1; }
+.dk-form input, .dk-form select, .dk-form textarea { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); min-width: 0; }
+.dk-form .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 700px) { .dk-form { grid-template-columns: 1fr 1fr; } }
 .alert { padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: var(--wash); border-left: 3px solid var(--critical); margin-top: 8px; }
 .alert.w { border-left-color: var(--warning); }
 .alert.g { border-left-color: var(--good); }
@@ -231,6 +238,7 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
     <button data-t="overview" class="on">Vue d'ensemble</button>
     <button data-t="opps">Opportunités</button>
     <button data-t="swing">Swing</button>
+    <button data-t="desk">Desk (paper)</button>
     <button data-t="strat">Stratégies</button>
     <button data-t="lab">Laboratoire</button>
     <button data-t="pf">Mon portefeuille</button>
@@ -605,6 +613,54 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
         </div>
       </div>
       <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </section>
+  </section>
+
+  <section class="tab" id="tab-desk">
+    <div class="alert w" style="margin-top:16px"><b>Paper trading uniquement</b> — aucun ordre réel n'est jamais envoyé. Le PM (vous ou un agent) décide quoi tenter ;
+      <b>le code</b> décide de ce qui atteint le courtier fictif : chaque ordre passe par le risk manager, et chaque décision est écrite au registre puis revue contre le Nasdaq 100.
+      Outil d'entraînement — pas un conseil en investissement.</div>
+    <div class="tiles" id="dk-tiles"></div>
+    <div class="grid g21">
+      <section class="card">
+        <div class="head"><div><h2>Positions du compte paper</h2><div class="sub" id="dk-pos-sub"></div></div></div>
+        <div class="tablewrap" style="max-height:420px"><table id="dk-pos"></table></div>
+      </section>
+      <section class="card">
+        <div class="head"><div><h2>Passer un ordre (paper)</h2><div class="sub">Le risk manager contrôle d'abord ; un ordre refusé est quand même noté au registre.</div></div></div>
+        <div class="dk-form">
+          <label>Titre<input id="dk-t" placeholder="ex. NVDA" size="8"></label>
+          <label>Montant ($)<input id="dk-a" type="number" min="0" step="100" placeholder="2000"></label>
+          <label>Stop<input id="dk-s" type="number" step="0.01"></label>
+          <label>Objectif<input id="dk-o" type="number" step="0.01"></label>
+          <label class="wide">Stratégie<select id="dk-st"></select></label>
+          <label class="wide">Raison de la décision<textarea id="dk-r" rows="2" placeholder="Pourquoi maintenant, ce qui invaliderait l'idée…"></textarea></label>
+          <div class="wide btns"><button class="btn" id="dk-check">Contrôler</button><button class="btn primary" id="dk-buy">Envoyer l'ordre d'achat (paper)</button>
+            <select id="dk-na"><option value="attendre">attendre</option><option value="rejeter">rejeter</option><option value="surveiller">surveiller</option></select>
+            <button class="btn" id="dk-note" title="Décision sans ordre, revue comme les autres">Noter la décision</button></div>
+        </div>
+        <div id="dk-out" class="sub" style="margin-top:8px"></div>
+      </section>
+    </div>
+    <section class="card" style="margin-top:16px">
+      <div class="head"><div><h2>Screener intraday</h2><div class="sub" id="dk-scr-sub"></div></div><div class="seg" id="seg-dk-scr"></div></div>
+      <div class="tablewrap" style="max-height:520px"><table id="dk-scr"></table></div>
+      <div class="sub" id="dk-scr-legend" style="margin-top:8px"></div>
+    </section>
+    <div class="grid g2">
+      <section class="card">
+        <div class="head"><div><h2>Comité : validation hors échantillon</h2><div class="sub" id="dk-ev-sub"></div></div></div>
+        <div class="tablewrap" style="max-height:none"><table id="dk-ev"></table></div>
+      </section>
+      <section class="card">
+        <div class="head"><div><h2>Registre des décisions et revue</h2><div class="sub" id="dk-reg-sub"></div></div></div>
+        <ul class="alerts" id="dk-lessons" style="columns:1"></ul>
+        <div class="tablewrap" style="max-height:460px"><table id="dk-reg"></table></div>
+      </section>
+    </div>
+    <section class="card" style="margin-top:16px">
+      <div class="head"><div><h2>Limites appliquées par le code</h2><div class="sub">Modifiables par vous seul, dans le fichier <code>data/private/desk/rules.json</code> (bouton « Dossier des données » de l'application). Les agents ne peuvent pas les changer.</div></div></div>
+      <div class="facts" id="dk-rules"></div>
     </section>
   </section>
 
@@ -1854,6 +1910,7 @@ function renderTab(t) {
   if (t === "pf") { renderPortfolio(); if (!PE) loadPfEditor(); else if (!peOpen) renderPfEditor(); }   // saisie ouverte : on ne l'écrase pas au rafraîchissement auto
   if (t === "strat") renderStrategies();
   if (t === "swing") renderSwing();
+  if (t === "desk") renderDesk();
   if (t === "lab") renderLab();
   if (t === "context") renderContext();
   if (t === "oversold") renderOversold();
@@ -1897,6 +1954,116 @@ segmented($("seg-sw-pa"), [["rs", "Tous (par force relative)"], ["up", "Structur
 segmented($("seg-lab-h"), [["h21", "1 mois"], ["h63", "3 mois"]], labH, k => { labH = k; renderLab(); });
 segmented($("seg-lab-ent"), [["x60", "60 séances"], ["x20", "20 séances"]], labEnt, k => { labEnt = k; renderLab(); });
 segmented($("seg-lab-today"), [["top", "Les mieux notés"], ["bottom", "Les moins bien notés"], ["held", "Mes titres"]], labToday, k => { labToday = k; renderLab(); });
+// ── Desk (paper trading)
+let dkScr = "long";
+const dkSig = k => D.intraday?.signals?.[k] || {label: k, side: "long", rule: ""};
+function renderDesk() {
+  const K = D.desk, I = D.intraday || {};
+  if (!K || K.error) { $("dk-tiles").innerHTML = `<div class="alert">${esc(K?.error || "Desk indisponible")}</div>`; return; }
+  const B = K.book, RV = K.review || {}, S = RV.summary || {};
+  const tile = (l, v, n, c = "") => `<div class="card tile"><div class="label">${l}</div><div class="value ${c}">${v}</div><div class="note">${n || ""}</div></div>`;
+  $("dk-tiles").innerHTML = tile("Valeur du compte", fmtNum(B.equity, 0) + " $", `départ ${fmtNum(B.start, 0)} $`)
+    + tile("Résultat total", fmtPct(B.pl_total_pct, 2), `${fmtNum(B.pl_total, 0)} $ · réalisé ${fmtNum(B.realized, 0)} $`, cls(B.pl_total))
+    + tile("Liquidités", fmtNum(B.cash, 0) + " $", `${fmtPct(B.equity ? B.cash / B.equity : null, 0, false)} du compte`)
+    + tile("Positions", B.positions.length, `max. ${K.rules.max_positions}`)
+    + tile("Décisions au registre", S.n || 0, `${S.blocked || 0} bloquées par le risque`)
+    + tile("Décisions jugées bonnes", S.judged ? `${S.good}/${S.judged}` : "—", "vs Nasdaq 100, après 5 ou 20 séances");
+  $("dk-pos-sub").textContent = (K.fired || []).length ? "Exécuté automatiquement : " + K.fired.map(f => `${f.ticker} (${f.why} à ${fmtNum(f.price)})`).join(", ")
+    : "Stops et objectifs surveillés à chaque rafraîchissement des cours.";
+  $("dk-pos").innerHTML = B.positions.length ? `<thead><tr><th class="l">Titre</th><th>Qté</th><th>Prix moyen</th><th>Cours</th><th>Résultat</th><th>Poids</th><th>Stop</th><th>Objectif</th><th class="l">Stratégie</th><th></th></tr></thead><tbody>`
+    + B.positions.map(p => `<tr style="cursor:default"><td class="l"><b>${esc(p.ticker)}</b></td><td>${fmtNum(p.qty, 3)}</td><td>${fmtNum(p.cost)}</td><td>${fmtNum(p.last)}</td>
+      <td class="${cls(p.pl_pct)}">${fmtPct(p.pl_pct, 1)}</td><td>${fmtPct(p.weight, 1, false)}</td><td>${fmtNum(p.stop)}</td><td>${fmtNum(p.target)}</td><td class="l"><small>${esc(p.strategy || "")}</small></td>
+      <td><button class="btn" data-sell="${esc(p.ticker)}">Vendre</button></td></tr>`).join("") + "</tbody>"
+    : `<tbody><tr><td class="muted" style="text-align:left">Aucune position. Préparez un ordre depuis le screener ou le formulaire.</td></tr></tbody>`;
+  $("dk-pos").querySelectorAll("[data-sell]").forEach(b => b.onclick = () => dkSell(b.dataset.sell));
+  const sel = $("dk-st"), cur = sel.value;
+  sel.innerHTML = K.strategies.map(s => `<option value="${esc(s.key)}">${esc(s.label)} — ${s.validated ? `validée, ≤ ${fmtPct(K.rules.max_poids_ligne, 0, false)}` : `non validée, ≤ ${fmtPct(K.rules.max_poids_non_valide, 0, false)}`}</option>`).join("");
+  if (cur) sel.value = cur;
+  // screener
+  const rows = (I.rows || []).filter(r => dkScr === "all" || (dkScr === "long" ? r.signals.some(k => dkSig(k).side === "long") : r.signals.some(k => dkSig(k).side !== "long")));
+  $("dk-scr-sub").textContent = I.error || `${I.note || ""} Séance du ${I.day || "—"} · Nasdaq 100 ${fmtPct(I.index_chg, 2)} · ${rows.length} titre(s). Signaux non validés sur l'historique : taille plafonnée.`;
+  $("dk-scr").innerHTML = rows.length ? `<thead><tr><th class="l">Titre</th><th>Cours</th><th>Variation</th><th>Gap</th><th>Depuis l'ouv.</th><th title="0 = plus bas du jour, 1 = plus haut">Range</th><th title="Volume du jour / moyenne 20 séances, corrigé de l'heure">Vol. rel.</th><th>vs indice</th><th>ATR</th><th class="l">Signaux</th><th></th></tr></thead><tbody>`
+    + rows.slice(0, 80).map(r => `<tr data-t="${esc(r.ticker)}"><td class="l"><b>${esc(r.ticker)}</b> <small>${esc(r.company || "")}</small></td><td>${fmtNum(r.price)}</td>
+      <td class="${cls(r.chg)}">${fmtPct(r.chg, 1)}</td><td class="${cls(r.gap)}">${fmtPct(r.gap, 1)}</td><td class="${cls(r.from_open)}">${fmtPct(r.from_open, 1)}</td>
+      <td>${fmtNum(r.range_pos, 2)}</td><td>${fmtNum(r.rvol, 1)}</td><td class="${cls(r.rel)}">${fmtPct(r.rel, 1)}</td><td class="${cls(r.move_atr)}">${fmtNum(r.move_atr, 1)}</td>
+      <td class="l">${r.signals.map(k => `<span class="verdict ${dkSig(k).side === "long" ? "ok" : "trap"}" title="${esc(dkSig(k).rule)}">${esc(dkSig(k).label)}</span>`).join(" ") || "<span class='muted'>—</span>"}</td>
+      <td>${r.signals.some(k => dkSig(k).side === "long") ? `<button class="btn" data-prep="${esc(r.ticker)}">Préparer</button>` : ""}</td></tr>`).join("") + "</tbody>"
+    : `<tbody><tr><td class="muted" style="text-align:left">Aucun titre dans ce filtre pour l'instant.</td></tr></tbody>`;
+  $("dk-scr").querySelectorAll("[data-prep]").forEach(b => b.onclick = e => { e.stopPropagation(); dkPrep(rows.find(r => r.ticker === b.dataset.prep)); });
+  $("dk-scr").querySelectorAll("tr[data-t]").forEach(tr => tr.onclick = () => openStock(tr.dataset.t));
+  $("dk-scr-legend").innerHTML = Object.values(I.signals || {}).map(s => `<span class="verdict ${s.side === "long" ? "ok" : "trap"}">${esc(s.label)}</span> ${esc(s.rule)}`).join("<br>");
+  // comité
+  const EV = K.evaluator || {};
+  $("dk-ev-sub").textContent = EV.note || `Historique ${EV.period || ""}, période réservée depuis ${EV.cutoff || ""}. ${EV.method || ""}`;
+  const r_ = st => st && isNum(st.edge_R) ? `${st.edge_R > 0 ? "+" : ""}${fmtNum(st.edge_R, 2)} R <small>(${st.n})</small>` : "—";
+  $("dk-ev").innerHTML = (EV.setups || []).length ? `<thead><tr><th class="l">Setup</th><th class="l">Statut</th><th title="Avantage par trade vs une entrée au hasard, années décidées avec les seules données passées">Walk-forward</th><th title="30 % les plus récents, jamais utilisés pour décider">Période réservée</th></tr></thead><tbody>`
+    + EV.setups.map(s => `<tr style="cursor:default" title="${esc(s.why)}"><td class="l">${esc(s.label)}</td><td class="l"><span class="verdict ${s.validated ? "ok" : "trap"}">${esc(s.status)}</span></td>
+      <td class="${cls(s.walk_forward?.edge_R)}">${r_(s.walk_forward)}</td><td class="${cls(s.holdout?.edge_R)}">${r_(s.holdout)}</td></tr>`).join("") + "</tbody>" : "";
+  // registre
+  $("dk-reg-sub").textContent = `${S.n || 0} décisions · ${S.executed || 0} exécutées · ${S.blocked || 0} bloquées par le risque. Un achat est « bon » s'il bat le Nasdaq 100 ; une attente ou un refus, si le titre fait moins bien.`;
+  $("dk-lessons").innerHTML = (RV.lessons || []).map(l => `<li>${esc(l.text)}</li>`).join("");
+  const xx = r => isNum(r.x20) ? r.x20 : isNum(r.x5) ? r.x5 : r.x_now;
+  $("dk-reg").innerHTML = (RV.rows || []).length ? `<thead><tr><th class="l">Date</th><th class="l">Auteur</th><th class="l">Décision</th><th class="l">Statut</th><th>vs indice</th><th class="l">Jugement</th><th class="l">Raison</th></tr></thead><tbody>`
+    + RV.rows.map(r => `<tr style="cursor:default"><td class="l">${esc((r.time || "").slice(0, 16).replace("T", " "))}</td><td class="l">${esc(r.actor || "")}</td>
+      <td class="l">${esc(r.action)} <b>${esc(r.ticker)}</b></td><td class="l"><span class="verdict ${r.status === "exécuté" ? "ok" : r.status === "noté" ? "none" : "trap"}" title="${esc((r.blocked_by || []).join(" · "))}">${esc(r.status)}</span></td>
+      <td class="${cls(xx(r))}">${fmtPct(xx(r), 1)}</td><td class="l">${r.good == null ? "<span class='muted'>en attente</span>" : r.good ? "bonne" : "<b>à revoir</b>"}</td>
+      <td class="l"><small>${esc(r.reason || "")}${(r.blocked_by || []).length ? " — bloqué : " + esc(r.blocked_by.join(" · ")) : ""}</small></td></tr>`).join("") + "</tbody>"
+    : `<tbody><tr><td class="muted" style="text-align:left">Registre vide.</td></tr></tbody>`;
+  const RL = K.rules, rl = [["Capital de départ", fmtNum(RL.capital_depart, 0) + " $"], ["Poids max. (stratégie validée)", fmtPct(RL.max_poids_ligne, 0, false)],
+    ["Poids max. (non validée)", fmtPct(RL.max_poids_non_valide, 0, false)], ["Perte max. au stop", fmtPct(RL.risque_max_trade, 1, false) + " du compte"],
+    ["Stop obligatoire", RL.stop_obligatoire ? "oui" : "non"], ["Positions max.", RL.max_positions], ["Liquidités min.", fmtPct(RL.min_liquidites, 0, false)],
+    ["Achats max. sur 7 jours", RL.max_ordres_semaine], ["Pause après une journée à", fmtPct(RL.pause_apres_perte_jour, 0)], ["Pas d'achat avant résultats", RL.jours_sans_resultats + " jours"]];
+  $("dk-rules").innerHTML = rl.map(([l, v]) => `<div class="fact"><b>${esc(String(v))}</b> ${esc(l)}</div>`).join("");
+}
+function dkPrep(r) {
+  if (!r) return;
+  $("dk-t").value = r.ticker; $("dk-s").value = r.stop ?? ""; $("dk-o").value = r.target ?? "";
+  const k = r.signals.find(k => dkSig(k).side === "long"); if (k) $("dk-st").value = "intraday:" + k;
+  if (!$("dk-a").value && D.desk) $("dk-a").value = Math.floor(D.desk.book.equity * D.desk.rules.max_poids_non_valide / 100) * 100;
+  $("dk-r").value = `${dkSig(k).label} : variation ${fmtPct(r.chg, 1)}, volume relatif ${fmtNum(r.rvol, 1)}`;
+  $("dk-out").textContent = "Ordre préparé : vérifiez le stop et la raison, puis « Contrôler ».";
+  $("dk-t").scrollIntoView({behavior: "smooth", block: "center"});
+}
+function dkOrder() {
+  return {ticker: $("dk-t").value.trim().toUpperCase(), side: "buy", amount: parseFloat($("dk-a").value || "0"),
+          stop: $("dk-s").value ? parseFloat($("dk-s").value) : null, target: $("dk-o").value ? parseFloat($("dk-o").value) : null,
+          strategy: $("dk-st").value, reason: $("dk-r").value, actor: "vous"};
+}
+function dkShow(r, sent) {
+  if (r.error) { $("dk-out").innerHTML = `<div class="alert">${esc(r.error)}</div>`; return; }
+  const head = sent ? (r.ok ? `<b>Ordre paper exécuté</b> — ${fmtNum(r.qty, 3)} ${esc(r.ticker)} à ${fmtNum(r.price)} $ ; décision notée au registre.`
+                            : `<b>Ordre bloqué par le risk manager</b> — la décision est notée au registre avec la raison.`)
+                     : (r.ok ? "<b>Acceptable</b> par le risk manager." : "<b>Serait bloqué</b> par le risk manager.");
+  $("dk-out").innerHTML = `<div class="alert ${r.ok ? "g" : ""}" style="margin-top:0">${head}</div><ul class="checks" style="margin-top:8px">`
+    + (r.checks || []).map(c => `<li><span class="ic ${c.ok ? "ok" : "ko"}">${c.ok ? "✓" : "✗"}</span><span>${esc(c.label)} <small class="muted">${esc(c.detail || "")}</small></span></li>`).join("") + "</ul>";
+}
+async function dkPost(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  return r.json();
+}
+async function dkSend(dry) {
+  const o = dkOrder();
+  if (!o.ticker || !o.amount) { $("dk-out").textContent = "Indiquez un titre et un montant."; return; }
+  if (!dry && !o.reason.trim()) { $("dk-out").textContent = "Écrivez la raison de la décision : elle sera relue lors de la revue."; return; }
+  $("dk-out").textContent = dry ? "Contrôle…" : "Envoi…";
+  try { const r = await dkPost(dry ? "/api/desk/check" : "/api/desk/order", o); dkShow(r, !dry); if (!dry) load(true); }
+  catch (e) { $("dk-out").textContent = "Serveur injoignable."; }
+}
+async function dkSell(t) {
+  const reason = prompt(`Vendre toute la position ${t} (paper) ? Raison de la décision :`);
+  if (reason === null) return;
+  try { const r = await dkPost("/api/desk/order", {ticker: t, side: "sell", all: true, reason, actor: "vous"}); dkShow(r, true); load(true); }
+  catch (e) { $("dk-out").textContent = "Serveur injoignable."; }
+}
+async function dkNote() {
+  const t = $("dk-t").value.trim().toUpperCase(), reason = $("dk-r").value.trim();
+  if (!t || !reason) { $("dk-out").textContent = "Indiquez le titre et la raison de la décision."; return; }
+  try { const r = await dkPost("/api/desk/note", {ticker: t, action: $("dk-na").value, reason, strategy: $("dk-st").value, actor: "vous"});
+    $("dk-out").innerHTML = r.error ? `<div class="alert">${esc(r.error)}</div>` : `<div class="alert g" style="margin-top:0">Décision notée : ${esc(r.action)} ${esc(r.ticker)}. Elle sera revue après 5 et 20 séances.</div>`;
+    load(true); } catch (e) { $("dk-out").textContent = "Serveur injoignable."; }
+}
+$("dk-check").onclick = () => dkSend(true); $("dk-buy").onclick = () => dkSend(false); $("dk-note").onclick = dkNote;
+segmented($("seg-dk-scr"), [["long", "Signaux d'achat"], ["avoid", "À éviter"], ["all", "Tous"]], dkScr, k => { dkScr = k; renderDesk(); });
 $("ck-go").onclick = runCheck; $("ck-a").addEventListener("keydown", e => { if (e.key === "Enter") runCheck(); });
 segmented($("seg-pf"), [["all", "Toutes"], ["Piège potentiel", "Pièges"], ["Entrée validée", "Entrées validées"], ["loss", "Seuil de perte dépassé"]], pfFilter, k => { pfFilter = k; renderPortfolio(); });
 segmented($("seg-ep"), [["worst", "Pires"], ["best", "Meilleurs"], ["open", "En cours"]], epMode, k => { epMode = k; renderEpisodes(); });

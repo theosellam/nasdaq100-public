@@ -16,3 +16,8 @@ Réunis le comité d'investissement sur : $ARGUMENTS
    - le verdict du risk manager et ses conditions ;
    - les sources citées par les analystes.
 Rappelle que la décision finale appartient à l'utilisateur.
+
+Si l'utilisateur parle du desk ou du paper trading : avant de lancer les analystes, lis `python3 -W ignore ndx.py desk comite`
+et `desk status` ; transmets-les au PM, qui enregistre sa décision au registre (ordre paper ou note). Affiche à la fin
+la ligne du registre créée et, si un ordre a été bloqué, les contrôles ✗ du risk manager en code.
+
