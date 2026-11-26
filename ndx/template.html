@@ -60,6 +60,17 @@ h2 { font-size: 15px; margin: 0 0 2px; }
 .brand { display: flex; align-items: center; gap: 8px; margin: 0; }
 .brand img { width: 28px; height: 28px; display: block; }
 .brand .wm { font-family: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.01em; line-height: 1; }
+.chooser { position: fixed; inset: 0; background: rgba(10, 14, 20, 0.62); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.chooser.on { display: flex; }
+.chooser-box { background: var(--surface-1); border: 1px solid var(--border); border-radius: 16px; padding: 26px; max-width: 760px; width: 100%; }
+.chooser-box h2 { margin: 0 0 16px; font-size: 20px; }
+.chooser-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 640px) { .chooser-grid { grid-template-columns: 1fr; } }
+.choice { text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--wash); color: var(--text-primary); font: inherit; cursor: pointer; }
+.choice:hover, .choice:focus-visible { border-color: var(--jade); outline: 2px solid var(--jade); outline-offset: 1px; }
+.choice b { font-size: 17px; } .choice span { font-size: 13px; color: var(--text-secondary); } .choice small { font-size: 12px; color: var(--muted); }
+.brand button.idx { border: 0; font: inherit; font-size: 12px; cursor: pointer; color: var(--text-secondary); }
+body.mode-fr [data-mode="ndx"], body.mode-ndx [data-mode="fr"], body.mode-ndx .fr-only, body.mode-fr .ndx-only { display: none !important; }
 .brand .idx { font-size: 12px; font-weight: 500; color: var(--text-secondary); padding: 2px 8px; border-radius: 999px; background: var(--wash); }
 .btn:disabled { opacity: .6; cursor: default; }
 .spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp 0.7s linear infinite; display: none; }
@@ -221,8 +232,18 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
+<div class="chooser" id="chooser" role="dialog" aria-modal="true" aria-labelledby="chooser-h">
+  <div class="chooser-box">
+    <h2 id="chooser-h">Quel marché voulez-vous analyser ?</h2>
+    <div class="chooser-grid">
+      <button class="choice" data-choice="ndx"><b>Nasdaq 100</b><span>Les 100 plus grandes valeurs non financières du Nasdaq : cours en direct, opportunités, swing, laboratoire, desk.</span><small id="ch-ndx">Données mises à jour au démarrage</small></button>
+      <button class="choice" data-choice="fr"><b>Small caps France</b><span>Petites et moyennes valeurs d'Euronext Paris et Euronext Growth : filtre valeur et qualité, situations spéciales, desk en euros.</span><small id="ch-fr">…</small></button>
+    </div>
+    <div class="sub">Vous pourrez changer de marché à tout moment en cliquant sur le nom du marché, en haut à gauche. Outil d'analyse — pas un conseil en investissement.</div>
+  </div>
+</div>
 <div class="topbar"><div class="in">
-  <h1 class="brand"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 width=%2264%22 height=%2264%22 role=%22img%22 aria-label=%22Volatilistat%22%3E %3Cdefs%3E%3CclipPath id=%22c%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22/%3E%3C/clipPath%3E%3C/defs%3E %3Cg clip-path=%22url(%23c)%22%3E %3Crect width=%2264%22 height=%2264%22 fill=%22%231F6F63%22/%3E %3Crect y=%2244%22 width=%2264%22 height=%227%22 fill=%22%23E8A33D%22/%3E %3Crect y=%2251%22 width=%2264%22 height=%2213%22 fill=%22%2314213D%22/%3E %3C/g%3E %3Cg fill=%22%23F6F1E4%22%3E %3Crect x=%2214.5%22 y=%2227%22 width=%222%22 height=%2215%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%229%22 height=%229%22 rx=%221.5%22/%3E %3Crect x=%2228.5%22 y=%2219%22 width=%222%22 height=%2221%22/%3E%3Crect x=%2225%22 y=%2223%22 width=%229%22 height=%2212%22 rx=%221.5%22/%3E %3Crect x=%2242.5%22 y=%2210%22 width=%222%22 height=%2225%22/%3E%3Crect x=%2239%22 y=%2214%22 width=%229%22 height=%2215%22 rx=%221.5%22/%3E %3C/g%3E %3Cpath d=%22M53 7.5l1.4 2.9 3.2.5-2.3 2.2.5 3.2-2.8-1.5-2.9 1.5.6-3.2-2.3-2.2 3.2-.5z%22 fill=%22%23E8A33D%22/%3E %3C/svg%3E" alt=""><span class="wm">Volatilistat</span><span class="idx">Nasdaq 100</span></h1>
+  <h1 class="brand"><img src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22 width=%2264%22 height=%2264%22 role=%22img%22 aria-label=%22Volatilistat%22%3E %3Cdefs%3E%3CclipPath id=%22c%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22/%3E%3C/clipPath%3E%3C/defs%3E %3Cg clip-path=%22url(%23c)%22%3E %3Crect width=%2264%22 height=%2264%22 fill=%22%231F6F63%22/%3E %3Crect y=%2244%22 width=%2264%22 height=%227%22 fill=%22%23E8A33D%22/%3E %3Crect y=%2251%22 width=%2264%22 height=%2213%22 fill=%22%2314213D%22/%3E %3C/g%3E %3Cg fill=%22%23F6F1E4%22%3E %3Crect x=%2214.5%22 y=%2227%22 width=%222%22 height=%2215%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%229%22 height=%229%22 rx=%221.5%22/%3E %3Crect x=%2228.5%22 y=%2219%22 width=%222%22 height=%2221%22/%3E%3Crect x=%2225%22 y=%2223%22 width=%229%22 height=%2212%22 rx=%221.5%22/%3E %3Crect x=%2242.5%22 y=%2210%22 width=%222%22 height=%2225%22/%3E%3Crect x=%2239%22 y=%2214%22 width=%229%22 height=%2215%22 rx=%221.5%22/%3E %3C/g%3E %3Cpath d=%22M53 7.5l1.4 2.9 3.2.5-2.3 2.2.5 3.2-2.8-1.5-2.9 1.5.6-3.2-2.3-2.2 3.2-.5z%22 fill=%22%23E8A33D%22/%3E %3C/svg%3E" alt=""><span class="wm">Volatilistat</span><button class="idx" id="mode-btn" title="Changer de marché">Nasdaq 100 ▾</button></h1>
   <span class="pill" id="mkt"><span class="dot"></span><span id="mkt-label">—</span></span>
   <span class="sub" id="updated">Chargement des derniers cours…</span>
   <span class="grow"></span>
@@ -232,22 +253,27 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
 </div></div>
 
 <main>
-  <div class="banner" id="banner"></div>
+  <div class="banner ndx-only" id="banner"></div>
   <div class="update" id="update" role="status"></div>
   <div class="tabs" id="tabs">
-    <button data-t="overview" class="on">Vue d'ensemble</button>
-    <button data-t="opps">Opportunités</button>
-    <button data-t="swing">Swing</button>
-    <button data-t="desk">Desk (paper)</button>
-    <button data-t="eu">Small caps France</button>
-    <button data-t="strat">Stratégies</button>
-    <button data-t="lab">Laboratoire</button>
-    <button data-t="pf">Mon portefeuille</button>
-    <button data-t="context">Contexte nov. 2026</button>
-    <button data-t="oversold">Survente / surachat</button>
-    <button data-t="analysts">Analystes</button>
-    <button data-t="sectors">Secteurs &amp; carte</button>
-    <button data-t="all">Tous les titres</button>
+    <button data-mode="ndx" data-t="overview" class="on">Vue d'ensemble</button>
+    <button data-mode="ndx" data-t="opps">Opportunités</button>
+    <button data-mode="ndx" data-t="swing">Swing</button>
+    <button data-mode="ndx" data-t="desk">Desk (paper)</button>
+    <button data-mode="ndx" data-t="strat">Stratégies</button>
+    <button data-mode="ndx" data-t="lab">Laboratoire</button>
+    <button data-mode="ndx" data-t="pf">Mon portefeuille</button>
+    <button data-mode="ndx" data-t="context">Contexte nov. 2026</button>
+    <button data-mode="ndx" data-t="oversold">Survente / surachat</button>
+    <button data-mode="ndx" data-t="analysts">Analystes</button>
+    <button data-mode="ndx" data-t="sectors">Secteurs &amp; carte</button>
+    <button data-mode="ndx" data-t="all">Tous les titres</button>
+      <button data-mode="fr" data-t="fr-overview">Vue d'ensemble</button>
+    <button data-mode="fr" data-t="fr-opps">Opportunités</button>
+    <button data-mode="fr" data-t="fr-lab">Laboratoire</button>
+    <button data-mode="fr" data-t="fr-sit">Situations spéciales</button>
+    <button data-mode="fr" data-t="fr-desk">Desk (paper)</button>
+    <button data-mode="fr" data-t="fr-all">Tous les titres</button>
   </div>
 
   <!-- ═════════ Vue d'ensemble ═════════ -->
@@ -665,22 +691,41 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
     </section>
   </section>
 
-  <section class="tab" id="tab-eu">
-    <div class="alert w" id="eu-status" style="margin-top:16px">Chargement…</div>
+  <div class="alert w fr-only" id="eu-status" style="margin-top:16px">Chargement…</div>
+  <section class="tab" id="tab-fr-overview">
     <div class="tiles" id="eu-tiles"></div>
+    <div class="grid g21">
+      <section class="card">
+        <div class="head"><div><h2>Petites et moyennes valeurs françaises — 12 mois</h2><div class="sub" id="fr-idx-sub"></div></div><div class="legend" id="lg-fr-idx"></div></div>
+        <div id="chart-fr-idx"></div>
+      </section>
+      <section class="card">
+        <div class="head"><div><h2>Ampleur du marché</h2><div class="sub">Part des titres liquides au-dessus de leur moyenne mobile</div></div><div class="legend" id="lg-fr-br"></div></div>
+        <div id="chart-fr-br"></div>
+      </section>
+    </div>
+    <div class="grid g2">
+      <section class="card"><div class="head"><div><h2>Plus fortes hausses de la dernière séance</h2><div class="sub">Titres liquides (≥ 20 k€ échangés par jour)</div></div></div><table class="mini" id="fr-up"></table></section>
+      <section class="card"><div class="head"><div><h2>Plus fortes baisses de la dernière séance</h2><div class="sub">Titres liquides (≥ 20 k€ échangés par jour)</div></div></div><table class="mini" id="fr-down"></table></section>
+    </div>
+  </section>
+  <section class="tab" id="tab-fr-opps">
     <section class="card" style="margin-top:16px">
       <div class="head"><div><h2>Filtre valeur et qualité</h2><div class="sub" id="eu-scr-sub"></div></div>
         <div class="controls"><div class="seg" id="seg-eu"></div><input id="eu-q" placeholder="Rechercher…" type="search"><button class="btn" id="eu-reload">Actualiser</button></div></div>
       <div class="tablewrap" style="max-height:620px"><table id="eu-scr"></table></div>
     </section>
-    <div class="grid g2">
-      <section class="card">
+  </section>
+  <section class="tab" id="tab-fr-lab">
+    <section class="card" style="margin-top:16px">
         <div class="head"><div><h2>Laboratoire : le score bat-il le marché ?</h2><div class="sub" id="eu-lab-sub"></div></div></div>
         <div id="eu-lab-verdict"></div>
         <div class="tablewrap" style="max-height:none;margin-top:8px"><table id="eu-lab"></table></div>
         <div class="tablewrap" style="max-height:none;margin-top:12px"><table id="eu-fac"></table></div>
       </section>
-      <section class="card">
+  </section>
+  <section class="tab" id="tab-fr-sit">
+    <section class="card" style="margin-top:16px">
         <div class="head"><div><h2>Situations spéciales</h2><div class="sub">Offres publiques, retraits obligatoires, rachats : saisissez l'offre depuis l'avis AMF ou le communiqué, le système calcule l'écart et son rendement annualisé.</div></div></div>
         <div class="tablewrap" style="max-height:300px"><table id="eu-sit"></table></div>
         <div class="dk-form" style="margin-top:10px">
@@ -695,7 +740,8 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
         <h3 style="margin:14px 0 4px;font-size:13.5px">Pistes détectées automatiquement (à vérifier)</h3>
         <ul class="notes" id="eu-pistes"></ul>
       </section>
-    </div>
+  </section>
+  <section class="tab" id="tab-fr-desk">
     <section class="card" style="margin-top:16px">
       <div class="head"><div><h2>Desk Europe (paper, en euros)</h2><div class="sub">Même moteur que le desk Nasdaq 100, avec une limite de liquidité : un ordre ≤ 10 % des échanges quotidiens, une position ≤ 50 %. Aucun ordre réel.</div></div></div>
       <div class="tiles" id="eu-dk-tiles" style="margin-top:0"></div>
@@ -721,6 +767,13 @@ footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
           <div id="eu-out" class="sub" style="margin-top:8px"></div>
         </div>
       </div>
+    </section>
+  </section>
+  <section class="tab" id="tab-fr-all">
+    <section class="card" style="margin-top:16px">
+      <div class="head"><div><h2>Tous les titres</h2><div class="sub">Euronext Paris et Euronext Growth Paris — cliquez sur un en-tête pour trier</div></div>
+        <div class="controls"><input id="fr-all-q" placeholder="Rechercher…" type="search"></div></div>
+      <div class="tablewrap"><table id="fr-all"></table></div>
     </section>
   </section>
 
@@ -1964,7 +2017,7 @@ function renderPfSignals() {
 let currentTab = "overview";
 const rendered = {};
 function renderTab(t) {
-  if (t === "eu") { loadEu(); rendered[t] = true; return; }      // données indépendantes du Nasdaq 100
+  if (t.startsWith("fr-")) { if (EU && EU.ready) renderEu(); else loadEu(); rendered[t] = true; return; }   // données indépendantes du Nasdaq 100
   if (!D) return;            // premier chargement en cours : renderAll() rendra l'onglet actif
   if (t === "overview") { renderTiles(); renderExtended(); renderOverviewCharts(); renderSignals(); }
   if (t === "opps") renderOpps();
@@ -1981,6 +2034,7 @@ function renderTab(t) {
   rendered[t] = true;
 }
 function renderAll() {
+  if (MODE === "fr") { if (EU && EU.ready) renderEu(); return; }
   if (!D) return;
   const EQ = D.extended?.quotes || {};
   D.stocks.forEach(s => { const q = EQ[s.ticker]; s.ext_pct = q ? q.ext_pct : null; s.ext_session = q ? q.ext_session : null; });
@@ -2130,10 +2184,12 @@ async function loadEu() {
   try { EU = await (await fetch("/api/eu")).json(); } catch (e) { $("eu-status").textContent = "Serveur injoignable."; return; }
   renderEu();
   clearTimeout(euTimer);
-  if (!EU.ready || (EU.status || "").startsWith("mise à jour")) euTimer = setTimeout(() => { if (currentTab === "eu") loadEu(); }, 15000);
+  if (!EU.ready || (EU.status || "").startsWith("mise à jour")) euTimer = setTimeout(() => { if (MODE === "fr") loadEu(); }, 15000);
 }
 function renderEu() {
   const E = EU || {};
+  if (MODE === "fr") frTopbar();
+  if (E.ready) { try { renderFrOverview(); renderFrAll(); } catch (e) { console.error(e); } }
   if (!E.ready) {
     const busy = (E.status || "").startsWith("mise à jour");
     $("eu-status").innerHTML = busy ? `Données européennes en préparation : <b>${esc(E.status)}</b>. La première construction prend ≈ 30 à 60 min (rapports annuels ESEF) ; vous pouvez continuer à utiliser le reste du tableau de bord.`
@@ -2147,9 +2203,6 @@ function renderEu() {
     Les sociétés d'Euronext Growth ne publient pas de rapport ESEF : pas de score, seulement cours et liquidité. Outil d'analyse — pas un conseil en investissement.`;
   const B = E.desk.book;
   const tile = (l, v, n, c = "") => `<div class="card tile"><div class="label">${l}</div><div class="value ${c}">${v}</div><div class="note">${n || ""}</div></div>`;
-  $("eu-tiles").innerHTML = tile("Actions suivies", C.listed, "Euronext Paris + Growth") + tile("Éligibles", C.eligible, "taille et liquidité")
-    + tile("Notées", C.scored, "comptes ESEF suffisants") + tile("Laboratoire", L.verdict || "—", L.mean_excess != null ? `${fmtPct(L.mean_excess, 1)} par an après frais` : "", L.validated ? "up" : "")
-    + tile("Desk Europe", fmtNum(B.equity, 0) + " €", fmtPct(B.pl_total_pct, 2), cls(B.pl_total)) + tile("Situations ouvertes", (E.situations || []).filter(s => s.status === "ouverte").length, "suivies");
   // filtre
   const q = $("eu-q").value.trim().toLowerCase();
   let rows = (E.rows || []).filter(r => !q || (r.ticker + " " + r.name).toLowerCase().includes(q));
@@ -2227,6 +2280,45 @@ async function euSend(dry) {
   if (!dry && !o.reason.trim()) { $("eu-out").textContent = "Écrivez la thèse : elle sera relue lors de la revue."; return; }
   try { euShow(await euPost(dry ? "/api/eu/check" : "/api/eu/order", o), !dry); if (!dry) loadEu(); } catch (e) { $("eu-out").textContent = "Serveur injoignable."; }
 }
+let frSort = "cap", frDir = -1;
+function renderFrOverview() {
+  const O = EU.overview; if (!O) return;
+  $("fr-idx-sub").textContent = `Indice équipondéré de ${O.n_liquid} titres liquides (base 100 en 2019) · ${fmtPct(O.r_1d, 2)} sur la séance, ${fmtPct(O.r_1m, 1)} sur un mois, ${fmtPct(O.r_ytd, 1)} depuis le 1er janvier, ${fmtPct(O.r_1y, 1)} sur un an · séance du ${fmtDate(O.asof)}`;
+  lineChart($("chart-fr-idx"), $("lg-fr-idx"), O.index, [
+    {key: "close", label: "Small caps France", color: "--series-1"},
+    {key: "sma50", label: "MM 50 j", short: "MM50", color: "--series-2"},
+    {key: "sma200", label: "MM 200 j", short: "MM200", color: "--series-3"}]);
+  lineChart($("chart-fr-br"), $("lg-fr-br"), O.breadth, [
+    {key: "above50", label: "> MM 50 j", short: "MM50", color: "--series-1"},
+    {key: "above200", label: "> MM 200 j", short: "MM200", color: "--series-2"}],
+    {min: 0, max: 100, height: 230, fmtY: v => Math.round(v) + " %"});
+  const mini = L => L.map(m => `<tr><td class="l"><b>${esc(m.ticker.replace(".PA", ""))}</b> <small>${esc(m.name)}</small></td><td>${fmtNum(m.price)}</td><td>${fmtM(m.cap)}</td><td class="${cls(m.r1d)}">${fmtPct(m.r1d, 1)}</td></tr>`).join("");
+  $("fr-up").innerHTML = mini(O.up); $("fr-down").innerHTML = mini(O.down);
+  const C = EU.counts, L = EU.lab || {}, B = EU.desk.book;
+  const tile = (l, v, n, c = "") => `<div class="card tile"><div class="label">${l}</div><div class="value ${c}">${v}</div><div class="note">${n || ""}</div></div>`;
+  $("eu-tiles").innerHTML = tile("Indice small caps", fmtNum(O.level, 1), `${fmtPct(O.r_1d, 2)} sur la séance`, cls(O.r_1d))
+    + tile("Depuis le 1er janvier", fmtPct(O.r_ytd, 1), `1 an : ${fmtPct(O.r_1y, 1)}`, cls(O.r_ytd))
+    + tile("Ampleur", fmtNum(O.above200, 0) + " %", `au-dessus de la MM 200 j · ${fmtNum(O.above50, 0)} % > MM 50 j`)
+    + tile("Titres notés", C.scored, `${C.eligible} éligibles sur ${C.listed}`)
+    + tile("Laboratoire", L.verdict || "—", L.mean_excess != null ? `${fmtPct(L.mean_excess, 1)} par an après frais (écrêté)` : "", L.validated ? "up" : "")
+    + tile("Desk Europe", fmtNum(B.equity, 0) + " €", fmtPct(B.pl_total_pct, 2), cls(B.pl_total));
+}
+function renderFrAll() {
+  const q = $("fr-all-q").value.trim().toLowerCase();
+  const cols = [["ticker", "Titre", "l"], ["market", "Marché", "l"], ["price", "Cours"], ["cap", "Capi."], ["adv", "Liquidité"], ["fcf_yield", "Rdt FCF"],
+    ["earn_yield", "Rdt bénéf."], ["netcash_yield", "Tréso. nette / capi."], ["roe", "ROE"], ["op_margin", "Marge op."], ["rev_growth", "Croiss. CA"], ["score_pct", "Score"]];
+  const rows = (EU.rows || []).filter(r => !q || (r.ticker + " " + r.name).toLowerCase().includes(q)).sort((a, b) => {
+    const x = a[frSort], y = b[frSort]; if (x == null) return 1; if (y == null) return -1;
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * frDir; });
+  const cell = (r, k) => k === "ticker" ? `<td class="l"><b>${esc(r.ticker.replace(".PA", ""))}</b> <small>${esc(r.name)}</small></td>`
+    : k === "market" ? `<td class="l"><span class="sess">${esc(r.market)}</span></td>` : k === "price" ? `<td>${fmtNum(r.price)}</td>`
+    : k === "cap" ? `<td>${fmtM(r.cap)}</td>` : k === "adv" ? `<td>${isNum(r.adv) ? fmtNum(r.adv / 1e3, 0) + " k€" : "—"}</td>`
+    : k === "score_pct" ? `<td><b>${isNum(r.score_pct) ? fmtNum(r.score_pct * 100, 0) : "—"}</b></td>` : `<td class="${cls(r[k])}">${fmtPct(r[k], 1)}</td>`;
+  $("fr-all").innerHTML = `<thead><tr>${cols.map(([k, l, c]) => `<th class="${c || ""}" data-k="${k}">${l}${k === frSort ? (frDir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>`
+    + rows.map(r => `<tr style="cursor:default">${cols.map(([k]) => cell(r, k)).join("")}</tr>`).join("") + "</tbody>";
+  $("fr-all").querySelectorAll("th").forEach(th => th.onclick = () => { const k = th.dataset.k; frDir = k === frSort ? -frDir : (["ticker", "market"].includes(k) ? 1 : -1); frSort = k; renderFrAll(); });
+}
+$("fr-all-q").addEventListener("input", () => EU && EU.ready && renderFrAll());
 $("eu-check").onclick = () => euSend(true); $("eu-buy").onclick = () => euSend(false);
 $("eu-note").onclick = async () => { const t = $("eu-t").value.trim().toUpperCase(), r = $("eu-r").value.trim();
   if (!t || !r) { $("eu-out").textContent = "Indiquez le titre et la raison."; return; }
@@ -2281,7 +2373,7 @@ async function load(force) {
     $("banner").style.display = "block"; $("banner").textContent = "Impossible de joindre le serveur : " + e.message + " — lancez « python3 ndx.py serve ».";
   } finally { $("refresh").classList.remove("loading"); $("refresh").disabled = false; }
 }
-$("refresh").onclick = () => load(true);
+$("refresh").onclick = () => MODE === "fr" ? loadEu() : load(true);
 async function checkUpdate() {                       // nouvelle version publiée sur GitHub ?
   try {
     const u = await (await fetch("/api/update")).json();
@@ -2299,13 +2391,54 @@ if (LIVE) { setTimeout(checkUpdate, 8000); setInterval(checkUpdate, 3600000); }
 let timer = null;
 $("auto").onchange = () => { clearInterval(timer); if ($("auto").checked) timer = setInterval(() => load(false), 60000); localStorage.setItem("ndx-auto", $("auto").checked ? "1" : "0"); };
 
+// ── Choix du marché (écran à chaque ouverture ; l'adresse #ndx / #fr garde le choix au rechargement)
+let MODE = "ndx";
+const MODE_LABEL = {ndx: "Nasdaq 100", fr: "Small caps France"};
+function setMode(m) {
+  MODE = m === "fr" ? "fr" : "ndx";
+  document.body.classList.toggle("mode-fr", MODE === "fr"); document.body.classList.toggle("mode-ndx", MODE === "ndx");
+  $("mode-btn").textContent = MODE_LABEL[MODE] + " ▾";
+  document.title = "Volatilistat — " + MODE_LABEL[MODE];
+  if (location.hash !== "#" + MODE) history.replaceState(null, "", "#" + MODE);
+  $("chooser").classList.remove("on");
+  const first = $("tabs").querySelector(`button[data-mode="${MODE}"]`);
+  if (first) first.click();
+  if (MODE === "fr") { loadEu(); } else { frTopbarOff(); if (D) renderAll(); }
+}
+function openChooser() {
+  $("chooser").classList.add("on");
+  $("chooser").querySelector(`[data-choice="${MODE}"]`)?.focus();
+  fetch("/api/eu").then(r => r.json()).then(e => { EU = e;
+    $("ch-fr").textContent = e.ready ? `${e.counts.listed} actions, ${e.counts.scored} notées · données du ${(e.info.built || "").slice(0, 10)}`
+      : "Données à construire au premier usage (≈ 30 à 60 min)"; }).catch(() => {});
+}
+function parisSession() {
+  const p = new Intl.DateTimeFormat("fr-FR", {timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false}).formatToParts(new Date());
+  const g = k => p.find(x => x.type === k)?.value || "", h = +g("hour") * 60 + +g("minute"), wd = g("weekday");
+  const we = /sam|dim/i.test(wd), open = !we && h >= 540 && h < 1050;
+  return {state: open ? "open" : "closed", label: (open ? "Bourse de Paris ouverte" : "Bourse de Paris fermée") + ` · Paris ${g("hour")}:${g("minute")}`};
+}
+function frTopbar() {
+  const ps = parisSession();
+  $("mkt").className = "pill " + ps.state; $("mkt-label").textContent = ps.label;
+  const O = EU && EU.overview;
+  $("updated").textContent = EU && EU.ready ? `Cours européens au ${fmtDate(O ? O.asof : "")} · comptes annuels ESEF (données du ${(EU.info.built || "").slice(0, 10)})` : "Small caps France";
+  $("auto-wrap").style.display = "none";
+}
+function frTopbarOff() { $("auto-wrap").style.display = ""; }
+$("mode-btn").onclick = openChooser;
+$("chooser").querySelectorAll("[data-choice]").forEach(b => b.onclick = () => setMode(b.dataset.choice));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("chooser").classList.contains("on") && (location.hash === "#ndx" || location.hash === "#fr")) $("chooser").classList.remove("on"); });
 if (LIVE) {
+  const h = location.hash.slice(1);
+  if (h === "fr" || h === "ndx") setMode(h); else { document.body.classList.add("mode-ndx"); openChooser(); }
   load(false).then(() => {
     const pref = localStorage.getItem("ndx-auto");
     $("auto").checked = pref ? pref === "1" : D?.market?.state === "open";
     $("auto").onchange();
   });
 } else {
+  document.body.classList.add("mode-ndx"); $("mode-btn").disabled = true;
   $("refresh").style.display = "none"; $("auto-wrap").style.display = "none";
   [...new Set(D.stocks.map(s => s.sector))].sort().forEach(s => $("fsector").insertAdjacentHTML("beforeend", `<option value="${s}">${sec(s)}</option>`));
   renderAll();

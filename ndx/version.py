@@ -14,7 +14,7 @@ import threading
 import time
 import urllib.request
 
-__version__ = "1.5"
+__version__ = "1.5.1"
 
 REPO = "theosellam/nasdaq100-public"
 RELEASES_URL = f"https://github.com/{REPO}/releases/latest"

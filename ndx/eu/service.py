@@ -123,6 +123,33 @@ class Europe:
         self.review = None
         return res
 
+    # ── vue d'ensemble du marché français
+    def overview(self) -> dict:
+        close, vol, S = self.data["close"], self.data["volume"], self.snap
+        liq = S[(S["adv"].fillna(0) >= model.MIN_ADV) & (S["cap"].fillna(0) >= model.MIN_CAP)]["ticker"].tolist()
+        c = close[[t for t in liq if t in close]]
+        c = c[c.notna().mean(axis=1) >= 0.5].ffill(limit=5)    # ignore une séance encore incomplète chez Yahoo
+        idx = close[model.BENCH].reindex(c.index).dropna()
+        tail = 260
+        sma = lambda s, n: s.rolling(n, min_periods=int(n * 0.8)).mean()
+        H = pd.DataFrame({"close": idx, "sma50": sma(idx, 50), "sma200": sma(idx, 200)}).iloc[-tail:]
+        above = lambda n: ((c > c.rolling(n, min_periods=int(n * 0.8)).mean()).where(c.notna()).mean(axis=1) * 100)
+        B = pd.DataFrame({"above50": above(50), "above200": above(200)}).iloc[-tail:]
+        ser = lambda df: {"dates": [f"{d:%Y-%m-%d}" for d in df.index],
+                          **{k: [None if pd.isna(v) else round(float(v), 3) for v in df[k]] for k in df.columns}}
+        r = lambda n: float(idx.iloc[-1] / idx.iloc[-1 - n] - 1) if len(idx) > n else None
+        ytd = idx[idx.index.year < idx.index[-1].year]
+        r1 = (c.iloc[-1] / c.iloc[-2] - 1).dropna() if len(c) > 2 else pd.Series(dtype=float)
+        info = S.set_index("ticker")
+        mv = lambda ser_: [{"ticker": t, "name": info.at[t, "name"], "price": float(c[t].iloc[-1]), "r1d": float(v),
+                            "cap": None if pd.isna(info.at[t, "cap"]) else float(info.at[t, "cap"])} for t, v in ser_.items()]
+        return {"asof": f"{idx.index[-1]:%Y-%m-%d}", "level": float(idx.iloc[-1]),
+                "r_1d": r(1), "r_1w": r(5), "r_1m": r(21), "r_1y": r(252),
+                "r_ytd": float(idx.iloc[-1] / ytd.iloc[-1] - 1) if len(ytd) else None,
+                "above50": float(B["above50"].iloc[-1]) if len(B) else None, "above200": float(B["above200"].iloc[-1]) if len(B) else None,
+                "n_liquid": len(c.columns), "index": ser(H), "breadth": ser(B),
+                "up": mv(r1.nlargest(8)), "down": mv(r1.nsmallest(8))}
+
     # ── vue complète
     def payload(self, mark: bool = True) -> dict:
         self.ensure()
@@ -156,6 +183,7 @@ class Europe:
                      "fired": fired, "strategies": [{**s, "validated": self.validated().get(s["key"], False)} for s in STRATEGIES],
                      "equity": {"date": eq["date"].tolist(), "equity": eq["equity"].tolist(), "index": eq["index"].tolist()}},
             "bench_last": prices.get(model.BENCH),
+            "overview": self.overview(),
         }
 
 

@@ -6,14 +6,15 @@ Fichiers : data/private/desk_eu/ (rules.json, fills.csv, decisions.jsonl, equity
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 
 from ..data import DATA_DIR
 from .model import BENCH
 
-_spec = importlib.util.spec_from_file_location("ndx.desk_eu_engine", Path(__file__).resolve().parent.parent / "desk.py")
+# Copie indépendante du module ndx.desk (chemins et réglages propres). On passe par le chargeur du paquet,
+# et non par le fichier source : l'application compilée ne contient que la version compilée de desk.py.
+_spec = importlib.util.find_spec("ndx.desk")
 engine = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(engine)          # copie indépendante du module : chemins et réglages propres
+_spec.loader.exec_module(engine)
 
 engine.DESK_DIR = DATA_DIR / "private" / "desk_eu"
 engine.RULES_FILE = engine.DESK_DIR / "rules.json"
