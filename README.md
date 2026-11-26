@@ -139,6 +139,28 @@ Avec Claude Code, `CLAUDE.md` fixe les règles du fonds et `.claude/settings.jso
 `desk buy` hors limites et toute écriture directe dans `data/private/desk/`. Les limites vivent hors du modèle : une
 réponse sûre d'elle mais fausse ne peut pas les franchir.
 
+## Petites et moyennes capitalisations françaises (onglet « Small caps France », `python3 ndx.py eu`)
+
+Un second terrain, où les grands fonds vont peu : **Euronext Paris et Euronext Growth Paris** (≈ 600 actions).
+
+- **Données publiques et gratuites** : liste des actions (Euronext), comptes annuels officiels au format ESEF
+  (filings.xbrl.org, reliés aux actions via GLEIF), cours et volumes (Yahoo). Chaque compte n'est utilisé qu'à partir
+  du **30 avril** suivant la clôture (délai légal de publication) : jamais d'information avant qu'elle soit publique.
+- **Filtre valeur et qualité** : rendement FCF, rendement bénéficiaire, rendement actionnaire, trésorerie nette,
+  rentabilité des fonds propres, marge opérationnelle ; capitalisation de 20 M€ à 2 Md€ et au moins 20 k€ échangés par jour.
+- **Laboratoire** : un portefeuille par an, après frais (0,6 % / 1,5 % sur Growth), comparé à l'ensemble des titres.
+  Validé seulement si l'avantage tient à la fois en brut et sur des rendements écrêtés (un titre extrême ne décide pas).
+  Avec 5 à 6 années seulement (ESEF existe depuis 2021), c'est un indice, pas une preuve.
+- **Situations spéciales** : OPA, retraits obligatoires, rachats — écart avec l'offre et rendement annualisé ;
+  pistes automatiques (cours figé après un saut, capitalisation inférieure à la trésorerie nette).
+- **Desk Europe** (paper, en euros) : mêmes règles que le desk Nasdaq 100, plus une limite de liquidité
+  (un ordre ≤ 10 % des échanges quotidiens, une position ≤ 50 %).
+
+La première construction des données prend **30 à 60 minutes** (des centaines de rapports annuels) : elle ne démarre
+que lorsque vous cliquez sur « Construire les données » dans l'onglet. Ensuite : comptes chaque semaine, cours chaque jour.
+Limites : les sociétés d'Euronext Growth ne publient pas de rapport ESEF (pas de score) ; les investissements et la dette
+ne sont pas toujours lisibles (libellés propres à chaque société) ; biais du survivant partiel.
+
 ## Laboratoire de signaux (onglet « Laboratoire », `python3 ndx.py lab`)
 Teste chaque signal sur l'historique **sans information du futur** :
 - composition historique du Nasdaq 100 (Wikipedia, trimestrielle depuis 2020) pour limiter le biais du survivant ;

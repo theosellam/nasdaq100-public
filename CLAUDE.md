@@ -26,3 +26,15 @@ et **le code** — pas le modèle — décide de ce qui peut atteindre le courti
   la renvoient au comité
 - `python3 -W ignore ndx.py desk comite` : statut hors échantillon de chaque setup
 - `python3 -W ignore ndx.py swing` : setups du jour ; le screener intraday est dans l'onglet « Desk » du tableau de bord
+
+## Petites et moyennes capitalisations françaises (desk Europe, en euros)
+Univers : Euronext Paris + Euronext Growth Paris. Comptes annuels ESEF (point-in-time : connus au 30 avril suivant
+la clôture), cours Yahoo, liquidité médiane sur 60 séances. Même règles que le desk Nasdaq 100 (paper uniquement,
+registre obligatoire), plus une limite de liquidité : un ordre ≤ 10 % des échanges quotidiens, une position ≤ 50 %.
+- `python3 -W ignore ndx.py eu screen -n 30` : meilleurs scores valeur/qualité éligibles
+- `python3 -W ignore ndx.py eu stock ALCLA` : fiche d'un titre (mnémonique Euronext)
+- `python3 -W ignore ndx.py eu lab` : le score bat-il l'ensemble des titres, après frais ? (5 à 6 ans seulement : indice, pas preuve)
+- `python3 -W ignore ndx.py eu situations` / `eu situation-add TICKER --type opa --price … --close AAAA-MM-JJ --source "avis AMF …"`
+- `python3 -W ignore ndx.py eu check|buy|sell|note TICKER …` : desk Europe (mêmes options que `desk`)
+- `python3 -W ignore ndx.py eu update` : mise à jour complète (hebdomadaire ; le serveur la lance seul)
+Les sociétés d'Euronext Growth ne publient pas de rapport ESEF : pas de score, uniquement cours et liquidité.

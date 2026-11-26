@@ -390,6 +390,8 @@ def main() -> None:
     sub.add_parser("all")
     from ndx import desk_cli
     desk_cli.add_parser(sub)
+    from ndx.eu import cli as eu_cli
+    eu_cli.add_parser(sub)
     args = p.parse_args()
     cmd = args.cmd or "serve"
 
@@ -401,6 +403,8 @@ def main() -> None:
         return
     if cmd == "desk":
         sys.exit(desk_cli.run(args))
+    if cmd == "eu":
+        sys.exit(eu_cli.run(args))
     if cmd == "analysts":
         tickers = pd.read_csv(data.CONSTITUENTS_FILE)["ticker"].tolist()
         print("→ Prévisions des analystes…")

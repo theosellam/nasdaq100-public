@@ -32,6 +32,13 @@ DECISIONS = DESK_DIR / "decisions.jsonl"
 EQUITY = DESK_DIR / "equity.csv"
 FILL_COLS = ["id", "time", "ticker", "side", "qty", "price", "fees", "strategy", "stop", "target", "decision", "why"]
 SLIPPAGE = 0.0005           # 5 points de base contre nous, à l'achat comme à la vente
+CUR = "$"                   # devise affichée (le desk Europe la remplace par €)
+DOT_TO_DASH = True          # BRK.B → BRK-B (Yahoo, actions américaines) ; le desk Europe garde « MC.PA »
+
+
+def _norm(t) -> str:
+    t = str(t or "").upper().strip()
+    return t.replace(".", "-") if DOT_TO_DASH else t
 _LOCK = threading.RLock()
 
 DEFAULT_RULES = {
@@ -172,11 +179,11 @@ def _day_change(b: dict) -> float:
 
 # ───────────────────────── Risk manager (code) ─────────────────────────
 def check(order: dict, prices: dict[str, float], validated: dict[str, bool], earnings: dict[str, str] | None = None,
-          R: dict | None = None) -> dict:
+          R: dict | None = None, adv: dict[str, float] | None = None) -> dict:
     """Contrôle un ordre AVANT le courtier. order = {ticker, side, amount|qty, stop, target, strategy}.
     Renvoie {ok, checks:[{label, ok, detail}], qty, price}. Ne modifie rien."""
     R = R or rules()
-    t = str(order.get("ticker", "")).upper().strip().replace(".", "-")
+    t = _norm(order.get("ticker"))
     side = order.get("side", "buy")
     price = prices.get(t)
     b = book(prices, R)
@@ -187,7 +194,7 @@ def check(order: dict, prices: dict[str, float], validated: dict[str, bool], ear
         checks.append({"label": label, "ok": bool(ok), "detail": detail})
 
     c("Titre coté avec un cours disponible", price is not None and price > 0,
-      f"{price:,.2f} $".replace(",", " ") if price else f"aucun cours pour {t or '—'}")
+      f"{price:,.2f} {CUR}".replace(",", " ") if price else f"aucun cours pour {t or '—'}")
     if price is None or price <= 0:
         return {"ok": False, "checks": checks, "ticker": t, "side": side, "qty": 0, "price": None}
     px = price * (1 + SLIPPAGE if side == "buy" else 1 - SLIPPAGE)
@@ -223,10 +230,10 @@ def check(order: dict, prices: dict[str, float], validated: dict[str, bool], ear
     if stop and 0 < stop < px:
         risk = (px - stop) * qty
         c(f"Perte au stop ≤ {R['risque_max_trade']:.1%} du compte", risk <= R["risque_max_trade"] * eq + 1e-6,
-          f"{risk:,.0f} $ soit {risk / eq:.2%}".replace(",", " "))
+          f"{risk:,.0f} {CUR} soit {risk / eq:.2%}".replace(",", " "))
     cash_after = b["cash"] - amount
     c(f"Liquidités après achat ≥ {R['min_liquidites']:.0%} du compte", cash_after >= R["min_liquidites"] * eq,
-      f"{cash_after:,.0f} $ restants".replace(",", " "))
+      f"{cash_after:,.0f} {CUR} restants".replace(",", " "))
     if not held:
         c(f"Nombre de positions ≤ {R['max_positions']}", len(b["positions"]) + 1 <= R["max_positions"],
           f"{len(b['positions']) + 1} positions")
@@ -236,6 +243,15 @@ def check(order: dict, prices: dict[str, float], validated: dict[str, bool], ear
     dchg = _day_change(b)
     c(f"Pas de pause imposée (journée du compte > {R['pause_apres_perte_jour']:.0%})", dchg > R["pause_apres_perte_jour"],
       f"journée {dchg:+.2%}")
+    if adv is not None:                     # titres peu liquides : on doit pouvoir sortir sans faire le prix
+        a = adv.get(t)
+        po, pp = R.get("max_part_volume_ordre", 0.10), R.get("max_position_volume", 0.5)
+        c(f"Ordre ≤ {po:.0%} des échanges quotidiens", bool(a) and amount <= po * a,
+          f"{amount:,.0f} {CUR} pour {a:,.0f} {CUR} échangés par jour".replace(",", " ") if a else "liquidité inconnue")
+        if a:
+            c(f"Position ≤ {pp:.0%} des échanges quotidiens (sortie en quelques séances)",
+              (held["value"] if held else 0) + amount <= pp * a,
+              f"{(held['value'] if held else 0) + amount:,.0f} {CUR}".replace(",", " "))
     ed = (earnings or {}).get(t)
     if ed:
         days = (pd.Timestamp(ed).normalize() - pd.Timestamp.now().normalize()).days
@@ -248,11 +264,11 @@ def check(order: dict, prices: dict[str, float], validated: dict[str, bool], ear
 
 # ───────────────────────── Courtier fictif + registre ─────────────────────────
 def submit(order: dict, prices: dict[str, float], validated: dict[str, bool], earnings: dict | None = None,
-           index_level: float | None = None) -> dict:
+           index_level: float | None = None, adv: dict[str, float] | None = None) -> dict:
     """Passe un ordre paper. Le risk manager tranche d'abord ; la décision est TOUJOURS écrite au registre."""
     with _LOCK:
         R = rules()
-        res = check(order, prices, validated, earnings, R)
+        res = check(order, prices, validated, earnings, R, adv)
         t = res["ticker"]
         dec = {"id": uuid.uuid4().hex[:10], "time": _now(), "actor": order.get("actor") or "vous", "ticker": t,
                "action": "acheter" if res["side"] == "buy" else "vendre", "strategy": res.get("strategy") or order.get("strategy"),
@@ -274,7 +290,7 @@ def note(ticker: str, action: str, reason: str, actor: str = "vous", strategy: s
         raise ValueError("action : attendre, rejeter, surveiller, alléger ou sortir")
     with _LOCK:
         return _append_decision({"id": uuid.uuid4().hex[:10], "time": _now(), "actor": actor or "vous",
-                                 "ticker": ticker.upper().replace(".", "-"), "action": action, "strategy": strategy,
+                                 "ticker": _norm(ticker), "action": action, "strategy": strategy,
                                  "reason": (reason or "").strip()[:2000], "price": price, "index": index_level,
                                  "checks": [], "status": "noté"})
 

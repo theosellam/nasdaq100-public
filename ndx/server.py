@@ -503,6 +503,12 @@ class Boot:
             self.state = st
             print("✓ Données prêtes")
             st.lab_job()
+            try:                                   # petites capitalisations françaises : chargement + mise à jour hebdomadaire
+                from .eu.service import EUROPE
+                EUROPE.ensure()
+                EUROPE.build_job()
+            except Exception:
+                traceback.print_exc()
             if (data.analysts_age_hours() > ANALYSTS_MAX_AGE_H
                     or data.file_age_hours(data.FUNDAMENTALS_FILE) > FUNDAMENTALS_MAX_AGE_H):
                 st.refresh_analysts()
@@ -558,6 +564,9 @@ def make_handler(boot: Boot, password: str | None = None):
             try:
                 if url.path == "/api/update":          # disponible même pendant le démarrage
                     self._json(version.info())
+                elif url.path == "/api/eu":            # indépendant du Nasdaq 100
+                    from .eu.service import EUROPE
+                    self._json(report.clean(EUROPE.payload()))
                 elif url.path.startswith("/api/") and state is None:
                     self._json({"loading": True, "status": boot.status, "error": boot.error}, 503)
                 elif url.path in ("/", "/index.html"):
@@ -595,6 +604,27 @@ def make_handler(boot: Boot, password: str | None = None):
                     self._json({"error": "Requête trop volumineuse"}, 413)
                     return
                 body = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                if url.path.startswith("/api/eu/"):
+                    from .eu import situations as SIT
+                    from .eu.service import EUROPE
+                    try:
+                        if url.path in ("/api/eu/order", "/api/eu/check"):
+                            self._json(report.clean(EUROPE.order(body, dry=url.path.endswith("check"))))
+                        elif url.path == "/api/eu/note":
+                            self._json(EUROPE.note(body))
+                        elif url.path == "/api/eu/situation":
+                            self._json(SIT.add(body.get("ticker", ""), body.get("kind", "opa"), body.get("offer_price"),
+                                               body.get("close_date"), body.get("notes", ""), body.get("source", "")))
+                        elif url.path == "/api/eu/situation-close":
+                            self._json(SIT.close(body.get("id", ""), body.get("outcome", "")))
+                        elif url.path == "/api/eu/rebuild":
+                            EUROPE.build_job(force=True)
+                            self._json({"ok": True})
+                        else:
+                            self._send(404, b"Not found", "text/plain")
+                    except ValueError as e:
+                        self._json({"error": str(e)}, 400)
+                    return
                 if url.path in ("/api/desk/order", "/api/desk/check", "/api/desk/note"):
                     if boot.state is None:
                         self._json({"error": "Données en cours de chargement, réessayez dans un instant."}, 503)
